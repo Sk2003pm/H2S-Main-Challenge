@@ -103,6 +103,10 @@ export default function App() {
     }
   }, [profile]);
 
+  /**
+   * Load gamification progress metrics (XP and Level) from localStorage for the active user session.
+   * @param {string} username - The lowercase identifier of the student.
+   */
   const loadGamification = (username) => {
     try {
       const storedXp = localStorage.getItem(`mindalign_xp_${username}`) || '0';
@@ -116,6 +120,10 @@ export default function App() {
     }
   };
 
+  /**
+   * Fetch custom exam preparation tips and retrieve/generate the subject-specific quiz.
+   * Leverages the FastAPI backend to query the Gemini API based on identified triggers.
+   */
   const fetchDailyTipsAndQuiz = async () => {
     if (!profile) return;
     setIsQuizLoading(true);

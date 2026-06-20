@@ -40,6 +40,18 @@ describe('MindAlign Client-side Crypto & Storage Unit Tests', () => {
       expect(hash1).not.toBe(hash3);
       expect(hash1.length).toBe(64); // SHA-256 is 64 characters long in hex representation
     });
+
+    it('should generate different hashes for the same password when using unique username salts', async () => {
+      const hashAlice = await hashPassword('password123', 'alice');
+      const hashBob = await hashPassword('password123', 'bob');
+      const hashNoSalt = await hashPassword('password123');
+
+      expect(hashAlice).not.toBe(hashBob);
+      expect(hashAlice).not.toBe(hashNoSalt);
+      expect(hashBob).not.toBe(hashNoSalt);
+      expect(hashAlice.length).toBe(64);
+      expect(hashBob.length).toBe(64);
+    });
   });
 
   describe('User Registration & Authentication', () => {

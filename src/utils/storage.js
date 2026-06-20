@@ -7,18 +7,21 @@ const KEYS = {
 };
 
 // Web Crypto API helper to hash passwords securely in the client
-export async function hashPassword(password) {
+export async function hashPassword(password, salt = "") {
   try {
-    const msgUint8 = new TextEncoder().encode(password);
+    // Salt the password input string to protect against pre-computed rainbow table attacks
+    const saltedInput = salt ? `${password}_salt:${salt.toLowerCase()}` : password;
+    const msgUint8 = new TextEncoder().encode(saltedInput);
     const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   } catch (e) {
     console.error("Crypto API not supported or failed, using fallback", e);
-    // Simple fallback hash if crypto isn't available (unlikely in modern browsers)
+    // Simple fallback hash if crypto isn't available, preserving salt constraints
+    const saltedInput = salt ? `${password}_salt:${salt.toLowerCase()}` : password;
     let hash = 0;
-    for (let i = 0; i < password.length; i++) {
-      hash = (hash << 5) - hash + password.charCodeAt(i);
+    for (let i = 0; i < saltedInput.length; i++) {
+      hash = (hash << 5) - hash + saltedInput.charCodeAt(i);
       hash |= 0;
     }
     return 'fb_' + hash.toString(16);
@@ -57,7 +60,8 @@ export const storage = {
       return { success: false, message: 'Username already exists' };
     }
 
-    const passwordHash = await hashPassword(password);
+    // Hash password salted with unique lowercase username
+    const passwordHash = await hashPassword(password, cleanUsername);
     db[cleanUsername] = {
       username: cleanUsername,
       passwordHash,
@@ -81,7 +85,8 @@ export const storage = {
       return { success: false, message: 'Invalid username or password' };
     }
 
-    const passwordHash = await hashPassword(password);
+    // Verify salted credentials
+    const passwordHash = await hashPassword(password, cleanUsername);
     if (user.passwordHash !== passwordHash) {
       return { success: false, message: 'Invalid username or password' };
     }

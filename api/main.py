@@ -22,14 +22,34 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS Middleware config
+# Hardened CORS Middleware config for local dev (Vercel requests are same-origin via rewrites)
+allowed_origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
+
+# Custom middleware for defense-in-depth HTTP security headers
+@app.middleware("http")
+async def add_security_headers(request, call_next):
+    response = await call_next(request)
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Content-Security-Policy"] = "default-src 'self'; frame-ancestors 'none';"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
 
 # Configure Gemini
 API_KEY = os.getenv("GEMINI_API_KEY", "")
@@ -160,16 +180,28 @@ def get_fallback_chat_reply(message: str, exam: str) -> str:
     return f"Preparing for {exam} can feel overwhelming. Take a short 2-minute break, drink some water, and remember that your well-being comes first."
 
 # Endpoints
-@app.get("/api/health")
+@app.get("/api/health", summary="Health check status")
 def health_check():
+    """
+    Check the status of the MindAlign backend server.
+    
+    Returns:
+        A JSON dictionary indicating server status, Gemini connectivity, and model configuration.
+    """
     return {
         "status": "healthy",
         "gemini_api_configured": bool(API_KEY),
         "gemini_model": MODEL_NAME
     }
 
-@app.post("/api/analyze-journal")
+@app.post("/api/analyze-journal", response_model=JournalAnalysisResponse, summary="Analyze student journal entry")
 async def analyze_journal(request: JournalRequest):
+    """
+    Analyze an open-ended journal entry from a student preparing for a competitive exam.
+    
+    Generates dynamic sentiment metrics, trigger categories, actionable coping strategies,
+    and milestone encouragements via the Gemini API (with secure local fallback processing).
+    """
     if not API_KEY:
         return get_fallback_journal_analysis(request.text, request.exam, request.current_stress)
         
@@ -201,8 +233,14 @@ If self-harm is detected, include crisis helpline numbers in India (like Vandrev
         logger.error(f"Error calling Gemini API in analyze_journal: {str(e)}")
         return get_fallback_journal_analysis(request.text, request.exam, request.current_stress)
 
-@app.post("/api/chat-companion")
+@app.post("/api/chat-companion", summary="Conversational AI Chat Companion")
 async def chat_companion(request: ChatRequest):
+    """
+    Engage in an empathetic counseling chat with 'Aura', the student wellness companion.
+    
+    Includes built-in validation checks, context awareness relative to the student's
+    target exam and stress triggers, and a critical crisis safety warning filter.
+    """
     last_msg = request.messages[-1].content
     
     if not API_KEY:
@@ -238,8 +276,14 @@ Your instructions:
         return {"reply": f"[Offline Mode] {reply}"}
 
 # Dynamic AI study & relaxation tips generator
-@app.post("/api/daily-tips")
+@app.post("/api/daily-tips", summary="Get custom daily study and relaxation advice")
 async def generate_daily_tips(request: DailyTipRequest):
+    """
+    Generate personalized study and relaxation recommendations for the student.
+    
+    Uses current stress level and identified preparation triggers to query Gemini
+    for custom actionable tips (falling back to context-aware local lists if offline).
+    """
     if not API_KEY:
         return {
             "focus_tip": f"Divide your {request.exam} chapters into active revision segments. Tackle high-yield concepts first.",
@@ -340,8 +384,15 @@ def get_fallback_quiz(exam: str) -> Dict[str, Any]:
         }
 
 # Dynamic AI Zen Brain Quiz generator (MCQ quiz based on core exam subjects)
-@app.post("/api/generate-quiz")
+@app.post("/api/generate-quiz", summary="Generate custom exam subject quiz question")
 async def generate_quiz(request: QuizRequest):
+    """
+    Generate a dynamic academic multiple-choice question tailored to the student's exam syllabus.
+    
+    Prompts Gemini to generate specific subject-matter questions based on target curriculum
+    (Physics/Chemistry/Biology for NEET, Math/Physics/Chem for JEE, Polity/History for UPSC, etc.)
+    with a robust fallback matching question pool.
+    """
     if not API_KEY:
         return get_fallback_quiz(request.exam)
         
