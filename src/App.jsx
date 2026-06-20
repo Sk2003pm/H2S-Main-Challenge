@@ -547,18 +547,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* Assessment targets helper */}
-            <div className="glass-panel" style={{ marginTop: '1.5rem', borderLeft: '4px solid var(--accent-violet)' }}>
-              <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                <Info size={18} className="text-violet" /> Security & Compliance Panel
-              </h4>
-              <ul style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', paddingLeft: '1.25rem', lineHeight: '1.6' }}>
-                <li><strong>Local Cryptography:</strong> Client-side SHA-256 password hashing prevents cleartext exposure.</li>
-                <li><strong>Server-Side API key storage:</strong> Serverless architecture prevents API key leaks in browser networks.</li>
-                <li><strong>Privacy Isolation:</strong> Database isolate logs per user profile key (`mindalign_journals_[username]`).</li>
-                <li><strong>Accessibility:</strong> Pure HTML5 input validation, screen contrast ratios, and semantic structure.</li>
-              </ul>
-            </div>
+
           </div>
 
           <div className="db-col-4">
