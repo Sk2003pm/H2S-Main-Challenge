@@ -112,6 +112,8 @@ export default function BreathingBubble({ onCycleComplete, onTriggerAlert }) {
             style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', border: modeKey === 'BOX' ? '1px solid var(--accent-teal)' : '' }}
             onClick={() => handleModeChange('BOX')}
             disabled={isPlaying}
+            aria-pressed={modeKey === 'BOX'}
+            aria-label="Box breathing mode, four-four-four-four pattern"
           >
             Box (4-4-4-4)
           </button>
@@ -120,6 +122,8 @@ export default function BreathingBubble({ onCycleComplete, onTriggerAlert }) {
             style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', border: modeKey === 'CALM' ? '1px solid var(--accent-teal)' : '' }}
             onClick={() => handleModeChange('CALM')}
             disabled={isPlaying}
+            aria-pressed={modeKey === 'CALM'}
+            aria-label="Relaxation breathing mode, four-seven-eight pattern"
           >
             Relax (4-7-8)
           </button>

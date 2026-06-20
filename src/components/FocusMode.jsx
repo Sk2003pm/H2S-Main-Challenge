@@ -267,6 +267,8 @@ export default function FocusMode({ examProfile, onTimerComplete, onTriggerAlert
               className={`btn btn-secondary ${mode === 'study' ? 'active' : ''}`}
               style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', borderRadius: '4px' }}
               onClick={() => setMode('study')}
+              aria-pressed={mode === 'study'}
+              aria-label="Set timer to Study mode (twenty-five minutes)"
             >
               Study
             </button>
@@ -274,6 +276,8 @@ export default function FocusMode({ examProfile, onTimerComplete, onTriggerAlert
               className={`btn btn-secondary ${mode === 'break' ? 'active' : ''}`}
               style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', borderRadius: '4px' }}
               onClick={() => setMode('break')}
+              aria-pressed={mode === 'break'}
+              aria-label="Set timer to Break mode (five minutes)"
             >
               Break
             </button>
@@ -285,7 +289,13 @@ export default function FocusMode({ examProfile, onTimerComplete, onTriggerAlert
         </div>
 
         <div className="flex-center" style={{ gap: '0.75rem', marginBottom: '1.5rem' }}>
-          <button onClick={startPauseTimer} className="btn btn-teal" style={{ padding: '0.6rem 1.2rem', flex: 1 }}>
+          <button 
+            onClick={startPauseTimer} 
+            className="btn btn-teal" 
+            style={{ padding: '0.6rem 1.2rem', flex: 1 }}
+            aria-pressed={isActive}
+            aria-label={isActive ? "Pause focus timer" : "Start focus timer"}
+          >
             {isActive ? <Pause size={16} /> : <Play size={16} />}
             {isActive ? 'Pause' : 'Start Focus'}
           </button>
@@ -303,6 +313,8 @@ export default function FocusMode({ examProfile, onTimerComplete, onTriggerAlert
             <button 
               className={`sound-btn ${soundPlaying === 'waves' ? 'active' : ''}`}
               onClick={() => toggleSound('waves')}
+              aria-pressed={soundPlaying === 'waves'}
+              aria-label="Toggle synthesized ocean waves background sound"
             >
               <Volume2 size={16} />
               <span style={{ fontSize: '0.75rem' }}>Ocean Waves</span>
@@ -310,6 +322,8 @@ export default function FocusMode({ examProfile, onTimerComplete, onTriggerAlert
             <button 
               className={`sound-btn ${soundPlaying === 'binaural' ? 'active' : ''}`}
               onClick={() => toggleSound('binaural')}
+              aria-pressed={soundPlaying === 'binaural'}
+              aria-label="Toggle synthesized ten hertz alpha binaural beats sound"
             >
               <Volume2 size={16} />
               <span style={{ fontSize: '0.75rem' }}>Binaural 10Hz</span>
@@ -319,6 +333,7 @@ export default function FocusMode({ examProfile, onTimerComplete, onTriggerAlert
               style={{ opacity: soundPlaying ? 1 : 0.5 }}
               onClick={stopFocusSounds}
               disabled={!soundPlaying}
+              aria-label="Mute focus audio"
             >
               <VolumeX size={16} />
               <span style={{ fontSize: '0.75rem' }}>Mute</span>

@@ -239,10 +239,12 @@ export default function JournalAnalyzer({ examProfile, onAnalysisComplete, onCop
                   {currentAnalysis.coping_strategies.map((strategy, idx) => (
                     <label 
                       key={idx}
+                      htmlFor={`coping-check-${idx}`}
                       className={`coping-item ${completedCopings[strategy.title] ? 'completed' : ''}`}
                       style={{ cursor: 'pointer', display: 'flex', gap: '1rem', alignItems: 'center' }}
                     >
                       <input 
+                        id={`coping-check-${idx}`}
                         type="checkbox" 
                         checked={!!completedCopings[strategy.title]} 
                         onChange={() => toggleCoping(strategy.title)} 

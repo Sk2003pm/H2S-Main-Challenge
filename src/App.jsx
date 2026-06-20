@@ -639,6 +639,7 @@ export default function App() {
         <button 
           className={`nav-link ${activeTab === 'dashboard' ? 'active' : ''}`} 
           onClick={() => setActiveTab('dashboard')}
+          aria-current={activeTab === 'dashboard' ? 'page' : undefined}
         >
           <LayoutDashboard />
           <span>Dashboard</span>
@@ -647,6 +648,7 @@ export default function App() {
         <button 
           className={`nav-link ${activeTab === 'journal' ? 'active' : ''}`} 
           onClick={() => setActiveTab('journal')}
+          aria-current={activeTab === 'journal' ? 'page' : undefined}
         >
           <BookOpen />
           <span>Journal</span>
@@ -655,6 +657,7 @@ export default function App() {
         <button 
           className={`nav-link ${activeTab === 'chat' ? 'active' : ''}`} 
           onClick={() => setActiveTab('chat')}
+          aria-current={activeTab === 'chat' ? 'page' : undefined}
         >
           <MessageSquare />
           <span>Aura Chat</span>
@@ -663,6 +666,7 @@ export default function App() {
         <button 
           className={`nav-link ${activeTab === 'breathing' ? 'active' : ''}`} 
           onClick={() => setActiveTab('breathing')}
+          aria-current={activeTab === 'breathing' ? 'page' : undefined}
         >
           <Wind />
           <span>Breathing</span>
@@ -671,6 +675,7 @@ export default function App() {
         <button 
           className={`nav-link ${activeTab === 'stress-buster' ? 'active' : ''}`} 
           onClick={() => setActiveTab('stress-buster')}
+          aria-current={activeTab === 'stress-buster' ? 'page' : undefined}
         >
           <Gamepad2 />
           <span>Stress Buster</span>
@@ -781,40 +786,50 @@ export default function App() {
                 <button 
                   type="button"
                   onClick={() => setCurrentQuickMood(1)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '2.5rem', opacity: currentQuickMood === 1 ? 1 : 0.4, transform: currentQuickMood === 1 ? 'scale(1.2)' : 'none', transition: 'all 0.2s' }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '2.5rem', opacity: currentQuickMood === 1 ? 1 : 0.4, transform: currentQuickMood === 1 ? 'scale(1.2)' : 'none', transition: 'all 0.2s', padding: '0.2rem', borderRadius: '50%' }}
                   title="Overwhelmed"
+                  aria-label="Mood: Overwhelmed"
+                  aria-pressed={currentQuickMood === 1}
                 >
                   😞
                 </button>
                 <button 
                   type="button"
                   onClick={() => setCurrentQuickMood(2)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '2.5rem', opacity: currentQuickMood === 2 ? 1 : 0.4, transform: currentQuickMood === 2 ? 'scale(1.2)' : 'none', transition: 'all 0.2s' }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '2.5rem', opacity: currentQuickMood === 2 ? 1 : 0.4, transform: currentQuickMood === 2 ? 'scale(1.2)' : 'none', transition: 'all 0.2s', padding: '0.2rem', borderRadius: '50%' }}
                   title="Tensed"
+                  aria-label="Mood: Tensed"
+                  aria-pressed={currentQuickMood === 2}
                 >
                   😐
                 </button>
                 <button 
                   type="button"
                   onClick={() => setCurrentQuickMood(3)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '2.5rem', opacity: currentQuickMood === 3 ? 1 : 0.4, transform: currentQuickMood === 3 ? 'scale(1.2)' : 'none', transition: 'all 0.2s' }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '2.5rem', opacity: currentQuickMood === 3 ? 1 : 0.4, transform: currentQuickMood === 3 ? 'scale(1.2)' : 'none', transition: 'all 0.2s', padding: '0.2rem', borderRadius: '50%' }}
                   title="Neutral"
+                  aria-label="Mood: Neutral"
+                  aria-pressed={currentQuickMood === 3}
                 >
                   🙂
                 </button>
                 <button 
                   type="button"
                   onClick={() => setCurrentQuickMood(4)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '2.5rem', opacity: currentQuickMood === 4 ? 1 : 0.4, transform: currentQuickMood === 4 ? 'scale(1.2)' : 'none', transition: 'all 0.2s' }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '2.5rem', opacity: currentQuickMood === 4 ? 1 : 0.4, transform: currentQuickMood === 4 ? 'scale(1.2)' : 'none', transition: 'all 0.2s', padding: '0.2rem', borderRadius: '50%' }}
                   title="Focused"
+                  aria-label="Mood: Focused"
+                  aria-pressed={currentQuickMood === 4}
                 >
                   😇
                 </button>
                 <button 
                   type="button"
                   onClick={() => setCurrentQuickMood(5)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '2.5rem', opacity: currentQuickMood === 5 ? 1 : 0.4, transform: currentQuickMood === 5 ? 'scale(1.2)' : 'none', transition: 'all 0.2s' }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '2.5rem', opacity: currentQuickMood === 5 ? 1 : 0.4, transform: currentQuickMood === 5 ? 'scale(1.2)' : 'none', transition: 'all 0.2s', padding: '0.2rem', borderRadius: '50%' }}
                   title="Confident"
+                  aria-label="Mood: Confident"
+                  aria-pressed={currentQuickMood === 5}
                 >
                   🚀
                 </button>
