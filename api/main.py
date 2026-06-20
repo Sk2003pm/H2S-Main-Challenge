@@ -132,7 +132,9 @@ def generate_content_with_fallback(prompt: str, response_mime_type: Optional[str
                 logger.warning(f"Model '{m_name}' general exception: {str(e)}. Retrying next model...")
                 continue
                 
-    raise last_error
+    if last_error is not None:
+        raise last_error
+    raise RuntimeError("All models failed to generate content")
 
 # Local fallback data generators
 def get_fallback_journal_analysis(text: str, exam: str, current_stress: int) -> Dict[str, Any]:

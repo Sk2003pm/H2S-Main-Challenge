@@ -153,6 +153,7 @@ h1, h2, h3, h4 {
 .text-gradient {
   background: linear-gradient(135deg, #a78bfa, #2dd4bf);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
@@ -359,6 +360,7 @@ h1, h2, h3, h4 {
 
 .slider {
   -webkit-appearance: none;
+  appearance: none;
   width: 100%;
   height: 10px;
   border-radius: var(--border-radius-full);
