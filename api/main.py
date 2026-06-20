@@ -270,44 +270,103 @@ JSON structure must contain exactly these keys:
         }
 
 # Dynamic AI Zen Brain Quiz generator (MCQ quiz)
+def get_fallback_quiz(exam: str) -> Dict[str, Any]:
+    exam_lower = exam.lower()
+    if "jee" in exam_lower:
+        return {
+            "question": "[Chemistry - Chemical Bonding] Which of the following molecules has a linear shape and sp hybridization?",
+            "options": [
+                "Carbon Dioxide (CO2)",
+                "Water (H2O)",
+                "Sulfur Dioxide (SO2)"
+            ],
+            "correct_idx": 0,
+            "explanation": "CO2 has two double bonds, a steric number of 2, and linear geometry with 180-degree bond angles, which corresponds to sp hybridization."
+        }
+    elif "neet" in exam_lower:
+        return {
+            "question": "[Biology - Genetics] Which of the following is a classic ratio for a dihybrid cross in Mendelian inheritance under independent assortment?",
+            "options": [
+                "3:1",
+                "9:3:3:1",
+                "1:2:1"
+            ],
+            "correct_idx": 1,
+            "explanation": "A dihybrid cross between two heterozygous parents yields a phenotypic ratio of 9:3:3:1 in the F2 generation under independent assortment."
+        }
+    elif "upsc" in exam_lower:
+        return {
+            "question": "[Indian Polity] Which article of the Constitution of India lists the Fundamental Duties of citizens?",
+            "options": [
+                "Article 51A",
+                "Article 21A",
+                "Article 44"
+            ],
+            "correct_idx": 0,
+            "explanation": "Article 51A, added by the 42nd Constitutional Amendment Act of 1976, specifies the Fundamental Duties of Indian citizens."
+        }
+    elif "gate" in exam_lower:
+        return {
+            "question": "[Computer Science - Algorithms] What is the worst-case time complexity of sorting n elements using Merge Sort?",
+            "options": [
+                "O(n log n)",
+                "O(n^2)",
+                "O(n)"
+            ],
+            "correct_idx": 0,
+            "explanation": "Merge Sort consistently divides the array and merges them. The worst, average, and best-case time complexities are all O(n log n)."
+        }
+    elif "cat" in exam_lower:
+        return {
+            "question": "[Quantitative Aptitude - Arithmetic] If a person sells an article at a 20% profit, what is the ratio of cost price to selling price?",
+            "options": [
+                "5:6",
+                "4:5",
+                "6:5"
+            ],
+            "correct_idx": 0,
+            "explanation": "If Cost Price (CP) is 100, Selling Price (SP) is 120. The ratio CP:SP is 100:120, which simplifies to 5:6."
+        }
+    else:
+        return {
+            "question": "[Science] What is the chemical formula for common table salt?",
+            "options": [
+                "NaCl",
+                "KCl",
+                "HCl"
+            ],
+            "correct_idx": 0,
+            "explanation": "Table salt is Sodium Chloride, which has the chemical formula NaCl."
+        }
+
+# Dynamic AI Zen Brain Quiz generator (MCQ quiz based on core exam subjects)
 @app.post("/api/generate-quiz")
 async def generate_quiz(request: QuizRequest):
     if not API_KEY:
-        return {
-            "question": "Why is taking an active 5-minute break every 25 minutes of study (Pomodoro) highly effective for retrieval?",
-            "options": [
-                "It resets your neural paths and allows focus memory consolidation.",
-                "It allows you to study faster and cram more details.",
-                "It has no physiological impact; it just wastes study time."
-            ],
-            "correct_idx": 0,
-            "explanation": "Consolidation happens when the brain rests. High intensity study without short pauses causes interference, leading to faster forgetting of equations and concepts."
-        }
+        return get_fallback_quiz(request.exam)
         
     try:
         prompt = f"""
-Generate an engaging, single multiple-choice question (MCQ) for a student preparing for {request.exam}.
-The question should focus on study science, memory retrieval psychology, sleep hygiene, or stress biology.
-Their stress triggers include: {', '.join(request.triggers or ['general exam pressure'])}.
+Generate an engaging, single academic multiple-choice question (MCQ) based on the actual syllabus/subjects of the competitive exam: {request.exam}.
+The question MUST be relevant to core subjects of {request.exam}. For example:
+- If JEE: Ask about high-yield topics in Physics (e.g., mechanics, thermodynamics, electrostatics), Chemistry (e.g., organic reaction mechanisms, chemical bonding, chemical equilibrium), or Mathematics (e.g., calculus, coordinate geometry, matrices).
+- If NEET: Ask about high-yield topics in Biology (e.g., genetics, plant/animal physiology, cell biology), Chemistry (e.g., organic reaction mechanisms, physical chemistry laws), or Physics (e.g., optics, mechanics).
+- If UPSC CSE: Ask about high-yield topics in History, Indian Polity, Geography, Economics, or Science & Technology.
+- If GATE: Ask about core computer science/engineering subjects (e.g., algorithms, computer networks, operating systems, mathematics).
+- If CAT (IIM): Ask about Quantitative Aptitude (e.g., algebra, number systems, arithmetic) or Verbal Ability/Logical Reasoning puzzles.
+- For other exams: Ask about their core academic curriculum subjects.
+
+The question must be conceptual, challenging, and scientifically accurate, testing real subject matter, NOT general knowledge or mental health advice.
 
 Output a structured JSON response. Do not add markdown formatting.
 JSON structure must contain exactly these keys:
-- "question": string (the question text, e.g. relating to active recall, spaced repetition, or cognitive fatigue)
+- "question": string (the question text, stating the subject/chapter, e.g. '[Physics - Thermodynamics] A heat engine operates...')
 - "options": list of exactly 3 strings (representing choices)
 - "correct_idx": integer (0, 1, or 2 representing the index of correct choice in options list)
-- "explanation": string (a short explanation why the correct answer is scientific and helpful)
+- "explanation": string (a concise step-by-step academic explanation of the solution or concept)
 """
         result_text = generate_content_with_fallback(prompt, response_mime_type="application/json")
         return json.loads(result_text)
     except Exception as e:
         logger.error(f"Error generating daily quiz: {str(e)}")
-        return {
-            "question": "Why is taking an active 5-minute break every 25 minutes of study (Pomodoro) highly effective for retrieval?",
-            "options": [
-                "It resets your neural paths and allows focus memory consolidation.",
-                "It allows you to study faster and cram more details.",
-                "It has no physiological impact; it just wastes study time."
-            ],
-            "correct_idx": 0,
-            "explanation": "Consolidation happens when the brain rests. High intensity study without short pauses causes interference, leading to faster forgetting of equations and concepts."
-        }
+        return get_fallback_quiz(request.exam)

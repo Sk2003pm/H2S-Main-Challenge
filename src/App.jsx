@@ -665,7 +665,7 @@ export default function App() {
           <span>Stress Buster</span>
         </button>
 
-        <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center', width: '100%' }}>
+        <div className="nav-footer">
           <button 
             className="nav-link" 
             onClick={handleSignOut}
@@ -715,6 +715,17 @@ export default function App() {
           <span style={{ fontSize: '0.8rem', background: 'rgba(255,255,255,0.04)', padding: '0.35rem 0.75rem', borderRadius: 'var(--border-radius-full)', border: 'var(--border-light)', whiteSpace: 'nowrap' }}>
             User: <strong>@{profile.username}</strong>
           </span>
+          <div className="mobile-header-actions">
+            <button 
+              className="btn btn-secondary" 
+              onClick={handleSignOut}
+              style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+              title="Sign Out"
+            >
+              <LogOut size={14} />
+              <span>Sign Out</span>
+            </button>
+          </div>
         </div>
       </header>
 
