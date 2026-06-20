@@ -289,7 +289,7 @@ export default function FocusMode({ examProfile, onTimerComplete, onTriggerAlert
             {isActive ? <Pause size={16} /> : <Play size={16} />}
             {isActive ? 'Pause' : 'Start Focus'}
           </button>
-          <button onClick={() => resetTimer()} className="btn btn-secondary" style={{ padding: '0.6rem' }}>
+          <button onClick={() => resetTimer()} className="btn btn-secondary" style={{ padding: '0.6rem' }} aria-label="Reset study timer">
             <RotateCcw size={16} />
           </button>
         </div>

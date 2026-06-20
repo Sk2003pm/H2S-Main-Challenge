@@ -133,8 +133,9 @@ export default function JournalAnalyzer({ examProfile, onAnalysisComplete, onCop
 
           <form onSubmit={handleAnalyze} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             <div className="form-group">
-              <label>How are your thoughts today? (Minimum 10 characters)</label>
+              <label htmlFor="journal-textarea">How are your thoughts today? (Minimum 10 characters)</label>
               <textarea
+                id="journal-textarea"
                 className="input-field journal-textarea"
                 placeholder="Today was tough. I spent 4 hours on mathematics but still got stuck on mock test questions. I feel like I'm falling behind, and my peers are revising faster. Sleeping is getting harder..."
                 value={entryText}
@@ -145,12 +146,13 @@ export default function JournalAnalyzer({ examProfile, onAnalysisComplete, onCop
 
             <div className="form-group">
               <div className="flex-between">
-                <label>Self-Reported Tension/Stress Level: <strong>{stressLevel}%</strong></label>
+                <label htmlFor="journal-stress">Self-Reported Tension/Stress Level: <strong>{stressLevel}%</strong></label>
                 <span className="text-muted" style={{ fontSize: '0.8rem' }}>
                   {stressLevel > 75 ? '🔥 High Stress' : stressLevel > 40 ? '⚡ Tension' : '🍃 Calm'}
                 </span>
               </div>
               <input
+                id="journal-stress"
                 type="range"
                 min="1"
                 max="100"
@@ -235,24 +237,24 @@ export default function JournalAnalyzer({ examProfile, onAnalysisComplete, onCop
                 <h4 style={{ fontSize: '1rem', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Recommended Steps</h4>
                 <div className="coping-checklist">
                   {currentAnalysis.coping_strategies.map((strategy, idx) => (
-                    <div 
+                    <label 
                       key={idx}
                       className={`coping-item ${completedCopings[strategy.title] ? 'completed' : ''}`}
-                      onClick={() => toggleCoping(strategy.title)}
+                      style={{ cursor: 'pointer', display: 'flex', gap: '1rem', alignItems: 'center' }}
                     >
                       <input 
                         type="checkbox" 
                         checked={!!completedCopings[strategy.title]} 
-                        onChange={() => {}} 
+                        onChange={() => toggleCoping(strategy.title)} 
                         style={{ cursor: 'pointer' }}
                       />
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
                         <span style={{ fontSize: '0.85rem', fontWeight: '600' }}>{strategy.title}</span>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textDecoration: 'none' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
                           {strategy.description}
                         </span>
                       </div>
-                    </div>
+                    </label>
                   ))}
                 </div>
               </div>

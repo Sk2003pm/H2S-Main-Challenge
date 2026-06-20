@@ -143,6 +143,7 @@ export default function ChatCompanion({ examProfile, onTriggerConfirm }) {
           className="btn btn-secondary" 
           style={{ padding: '0.5rem', borderRadius: '50%' }}
           title="Reset Chat"
+          aria-label="Reset chat history"
         >
           <Trash2 size={16} />
         </button>
@@ -199,12 +200,14 @@ export default function ChatCompanion({ examProfile, onTriggerConfirm }) {
           onChange={(e) => setInputText(e.target.value)}
           onKeyDown={handleKeyPress}
           disabled={isLoading}
+          aria-label="Message input for Aura companion"
         />
         <button 
           onClick={() => handleSendMessage()} 
           className="btn btn-teal" 
           style={{ padding: '0.75rem' }}
           disabled={isLoading || !inputText.trim()}
+          aria-label="Send message to Aura"
         >
           <Send size={18} />
         </button>

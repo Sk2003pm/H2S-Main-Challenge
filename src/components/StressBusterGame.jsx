@@ -239,9 +239,11 @@ export default function StressBusterGame({ examProfile, onXpReward, onTriggerAle
           balloons.map((b) => {
             if (b.popped) return null;
             return (
-              <div
+              <button
+                type="button"
                 key={b.id}
                 onClick={(e) => popBalloon(b.id, b.text, e)}
+                aria-label={`Pop stress balloon: ${b.text}`}
                 style={{
                   position: 'absolute',
                   left: b.x,
@@ -261,6 +263,8 @@ export default function StressBusterGame({ examProfile, onXpReward, onTriggerAle
                   padding: '0.5rem',
                   cursor: 'pointer',
                   userSelect: 'none',
+                  border: 'none',
+                  fontFamily: 'inherit',
                   animation: 'float 3s ease-in-out infinite',
                   transition: 'transform 0.1s'
                 }}
@@ -275,7 +279,7 @@ export default function StressBusterGame({ examProfile, onXpReward, onTriggerAle
                   height: '14px',
                   background: 'rgba(255, 255, 255, 0.4)'
                 }}></div>
-              </div>
+              </button>
             );
           })
         )}

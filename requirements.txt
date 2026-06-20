@@ -2,3 +2,6 @@ fastapi
 google-generativeai
 pydantic
 python-dotenv
+httpx
+pytest
+

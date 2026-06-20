@@ -470,8 +470,9 @@ export default function App() {
             </h3>
 
             <div className="form-group">
-              <label>Username</label>
+              <label htmlFor="login-username">Username</label>
               <input 
+                id="login-username"
                 type="text" 
                 className="input-field" 
                 placeholder="e.g. skand" 
@@ -482,8 +483,9 @@ export default function App() {
             </div>
 
             <div className="form-group">
-              <label>Password</label>
+              <label htmlFor="login-password">Password</label>
               <input 
+                id="login-password"
                 type="password" 
                 className="input-field" 
                 placeholder="••••••" 
@@ -505,8 +507,9 @@ export default function App() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <div className="form-group">
-                <label>Username</label>
+                <label htmlFor="signup-username">Username</label>
                 <input 
+                  id="signup-username"
                   type="text" 
                   className="input-field" 
                   placeholder="e.g. skand" 
@@ -517,8 +520,9 @@ export default function App() {
               </div>
 
               <div className="form-group">
-                <label>Password (Min. 6 chars)</label>
+                <label htmlFor="signup-password">Password (Min. 6 chars)</label>
                 <input 
+                  id="signup-password"
                   type="password" 
                   className="input-field" 
                   placeholder="••••••" 
@@ -530,8 +534,9 @@ export default function App() {
             </div>
 
             <div className="form-group">
-              <label>Full Name / Nickname</label>
+              <label htmlFor="signup-name">Full Name / Nickname</label>
               <input 
+                id="signup-name"
                 type="text" 
                 className="input-field" 
                 placeholder="e.g. Skand Mishra" 
@@ -543,22 +548,27 @@ export default function App() {
 
             <div className="form-group">
               <label>Select Profile Avatar</label>
-              <div className="avatar-grid">
+              <div className="avatar-grid" role="radiogroup" aria-label="Select Profile Avatar">
                 {avatars.map((av) => (
-                  <div 
+                  <button 
+                    type="button"
                     key={av} 
                     className={`avatar-option ${setupAvatar === av ? 'selected' : ''}`}
                     onClick={() => setSetupAvatar(av)}
+                    aria-label={`Select avatar ${av}`}
+                    aria-pressed={setupAvatar === av}
+                    style={{ border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
                   >
                     {av}
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
 
             <div className="form-group">
-              <label>Target Competitive Exam</label>
+              <label htmlFor="signup-exam">Target Competitive Exam</label>
               <select 
+                id="signup-exam"
                 className="input-field" 
                 style={{ backgroundColor: 'var(--bg-tertiary)' }}
                 value={setupExam}
@@ -571,8 +581,9 @@ export default function App() {
             </div>
 
             <div className="form-group">
-              <label>Exam Date (Used for Timeline Countdown)</label>
+              <label htmlFor="signup-date">Exam Date (Used for Timeline Countdown)</label>
               <input 
+                id="signup-date"
                 type="date" 
                 className="input-field" 
                 value={setupDate}
