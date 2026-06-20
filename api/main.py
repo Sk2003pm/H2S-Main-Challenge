@@ -33,12 +33,12 @@ app.add_middleware(
 
 # Configure Gemini
 API_KEY = os.getenv("GEMINI_API_KEY", "")
-MODEL_NAME = os.getenv("GEMINI_MODEL", "gemini-1.5-pro")
+MODEL_NAME = os.getenv("GEMINI_MODEL", "gemini-2.5-pro")
 
 if API_KEY:
     try:
         genai.configure(api_key=API_KEY)
-        logger.info(f"Gemini API configured successfully with model: {MODEL_NAME}")
+        logger.info(f"Gemini API configured successfully. Configured model: {MODEL_NAME}")
     except Exception as e:
         logger.error(f"Error configuring Gemini API: {str(e)}")
 else:
@@ -83,6 +83,36 @@ class DailyTipRequest(BaseModel):
 class QuizRequest(BaseModel):
     exam: str
     triggers: List[str]
+
+# Safe model executor with active fallback chain
+def generate_content_with_fallback(prompt: str, response_mime_type: Optional[str] = None) -> str:
+    if not API_KEY:
+        raise ValueError("API key not configured")
+        
+    models_to_try = [MODEL_NAME, "gemini-1.5-flash", "gemini-2.0-flash", "gemini-2.5-flash", "gemini-1.5-pro"]
+    # deduplicate keeping order
+    seen = set()
+    models_to_try = [x for x in models_to_try if not (x in seen or seen.add(x))]
+    
+    last_error = None
+    for m_name in models_to_try:
+        try:
+            logger.info(f"Generating content using Gemini model: {m_name}")
+            model = genai.GenerativeModel(m_name)
+            config = {"response_mime_type": response_mime_type} if response_mime_type else None
+            response = model.generate_content(prompt, generation_config=config)
+            return response.text.strip()
+        except Exception as e:
+            last_error = e
+            err_msg = str(e).lower()
+            if "not found" in err_msg or "404" in err_msg or "not supported" in err_msg or "model" in err_msg:
+                logger.warning(f"Gemini model '{m_name}' failed or not accessible: {str(e)}. Retrying next model...")
+                continue
+            else:
+                logger.warning(f"Model '{m_name}' general exception: {str(e)}. Retrying next model...")
+                continue
+                
+    raise last_error
 
 # Local fallback data generators
 def get_fallback_journal_analysis(text: str, exam: str, current_stress: int) -> Dict[str, Any]:
@@ -144,7 +174,6 @@ async def analyze_journal(request: JournalRequest):
         return get_fallback_journal_analysis(request.text, request.exam, request.current_stress)
         
     try:
-        model = genai.GenerativeModel(MODEL_NAME)
         prompt = f"""
 You are a highly empathetic, trained student wellness counselor specializing in high-stakes exam anxiety (JEE, NEET, UPSC, etc.).
 Analyze this journal entry from a student preparing for the {request.exam} exam.
@@ -166,13 +195,10 @@ Your JSON structure must contain exactly these keys:
 
 If self-harm is detected, include crisis helpline numbers in India (like Vandrevala Foundation: +91 9999 666 555) in the analysis_summary and lower the mood_score.
 """
-        response = model.generate_content(
-            prompt,
-            generation_config={"response_mime_type": "application/json"}
-        )
-        return json.loads(response.text.strip())
+        result_text = generate_content_with_fallback(prompt, response_mime_type="application/json")
+        return json.loads(result_text)
     except Exception as e:
-        logger.error(f"Error calling Gemini API: {str(e)}")
+        logger.error(f"Error calling Gemini API in analyze_journal: {str(e)}")
         return get_fallback_journal_analysis(request.text, request.exam, request.current_stress)
 
 @app.post("/api/chat-companion")
@@ -184,8 +210,6 @@ async def chat_companion(request: ChatRequest):
         return {"reply": reply}
         
     try:
-        model = genai.GenerativeModel(MODEL_NAME)
-        
         system_instruction = f"""
 You are "Aura", a warm, empathetic, and expert digital wellness companion for students preparing for high-stakes examinations like {request.student_context.exam}.
 The student's self-reported stress level is {request.student_context.current_stress}/100.
@@ -206,14 +230,14 @@ Your instructions:
         prompt_parts.append("Aura: (Reply empathetically and concisely)")
         
         prompt = "\n".join(prompt_parts)
-        response = model.generate_content(prompt)
-        return {"reply": response.text.strip()}
+        reply = generate_content_with_fallback(prompt)
+        return {"reply": reply}
     except Exception as e:
         logger.error(f"Error in chat companion: {str(e)}")
         reply = get_fallback_chat_reply(last_msg, request.student_context.exam)
         return {"reply": f"[Offline Mode] {reply}"}
 
-# NEW ENDPOINT: Dynamic AI study & relaxation tips generator
+# Dynamic AI study & relaxation tips generator
 @app.post("/api/daily-tips")
 async def generate_daily_tips(request: DailyTipRequest):
     if not API_KEY:
@@ -224,7 +248,6 @@ async def generate_daily_tips(request: DailyTipRequest):
         }
         
     try:
-        model = genai.GenerativeModel(MODEL_NAME)
         prompt = f"""
 Generate personalized study focus and relaxation advice for a student preparing for the {request.exam} exam.
 Their current stress triggers are: {', '.join(request.triggers or ['general anxiety'])}.
@@ -236,11 +259,8 @@ JSON structure must contain exactly these keys:
 - "relaxation_tip": string (a specific relaxation or physical grounding advice based on their stress triggers)
 - "affirmation": string (a positive mindset affirmation)
 """
-        response = model.generate_content(
-            prompt,
-            generation_config={"response_mime_type": "application/json"}
-        )
-        return json.loads(response.text.strip())
+        result_text = generate_content_with_fallback(prompt, response_mime_type="application/json")
+        return json.loads(result_text)
     except Exception as e:
         logger.error(f"Error generating daily tips: {str(e)}")
         return {
@@ -249,13 +269,12 @@ JSON structure must contain exactly these keys:
             "affirmation": "My preparation progress is gradual and valuable."
         }
 
-# NEW ENDPOINT: Dynamic AI Zen Brain Quiz generator (MCQ quiz)
+# Dynamic AI Zen Brain Quiz generator (MCQ quiz)
 @app.post("/api/generate-quiz")
 async def generate_quiz(request: QuizRequest):
     if not API_KEY:
-        # Fallback to local quiz questions list
         return {
-            "question": "Why is taking a active 5-minute break every 25 minutes of study (Pomodoro) highly effective for retrieval?",
+            "question": "Why is taking an active 5-minute break every 25 minutes of study (Pomodoro) highly effective for retrieval?",
             "options": [
                 "It resets your neural paths and allows focus memory consolidation.",
                 "It allows you to study faster and cram more details.",
@@ -266,7 +285,6 @@ async def generate_quiz(request: QuizRequest):
         }
         
     try:
-        model = genai.GenerativeModel(MODEL_NAME)
         prompt = f"""
 Generate an engaging, single multiple-choice question (MCQ) for a student preparing for {request.exam}.
 The question should focus on study science, memory retrieval psychology, sleep hygiene, or stress biology.
@@ -279,15 +297,12 @@ JSON structure must contain exactly these keys:
 - "correct_idx": integer (0, 1, or 2 representing the index of correct choice in options list)
 - "explanation": string (a short explanation why the correct answer is scientific and helpful)
 """
-        response = model.generate_content(
-            prompt,
-            generation_config={"response_mime_type": "application/json"}
-        )
-        return json.loads(response.text.strip())
+        result_text = generate_content_with_fallback(prompt, response_mime_type="application/json")
+        return json.loads(result_text)
     except Exception as e:
         logger.error(f"Error generating daily quiz: {str(e)}")
         return {
-            "question": "Why is taking a active 5-minute break every 25 minutes of study (Pomodoro) highly effective for retrieval?",
+            "question": "Why is taking an active 5-minute break every 25 minutes of study (Pomodoro) highly effective for retrieval?",
             "options": [
                 "It resets your neural paths and allows focus memory consolidation.",
                 "It allows you to study faster and cram more details.",
