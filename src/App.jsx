@@ -16,7 +16,8 @@ import {
   CheckCircle,
   HelpCircle,
   Brain,
-  Gamepad2
+  Gamepad2,
+  Video
 } from 'lucide-react';
 import { storage } from './utils/storage';
 import BreathingBubble from './components/BreathingBubble';
@@ -24,6 +25,7 @@ import FocusMode from './components/FocusMode';
 import JournalAnalyzer from './components/JournalAnalyzer';
 import ChatCompanion from './components/ChatCompanion';
 import StressBusterGame from './components/StressBusterGame';
+import AuraLive from './components/AuraLive';
 import confetti from 'canvas-confetti';
 
 export default function App() {
@@ -664,6 +666,15 @@ export default function App() {
         </button>
 
         <button 
+          className={`nav-link ${activeTab === 'aura-live' ? 'active' : ''}`} 
+          onClick={() => setActiveTab('aura-live')}
+          aria-current={activeTab === 'aura-live' ? 'page' : undefined}
+        >
+          <Video />
+          <span>Aura Live</span>
+        </button>
+
+        <button 
           className={`nav-link ${activeTab === 'breathing' ? 'active' : ''}`} 
           onClick={() => setActiveTab('breathing')}
           aria-current={activeTab === 'breathing' ? 'page' : undefined}
@@ -930,6 +941,12 @@ export default function App() {
       {activeTab === 'chat' && (
         <div style={{ animation: 'slide-up var(--transition-normal) ease' }}>
           <ChatCompanion examProfile={profile} onTriggerConfirm={triggerConfirm} />
+        </div>
+      )}
+
+      {activeTab === 'aura-live' && (
+        <div style={{ animation: 'slide-up var(--transition-normal) ease' }}>
+          <AuraLive examProfile={profile} onTriggerConfirm={triggerConfirm} />
         </div>
       )}
 
