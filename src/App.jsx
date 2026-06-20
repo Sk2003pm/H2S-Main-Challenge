@@ -742,7 +742,7 @@ export default function App() {
           <span style={{ fontSize: '0.8rem', background: 'rgba(255,255,255,0.04)', padding: '0.35rem 0.75rem', borderRadius: 'var(--border-radius-full)', border: 'var(--border-light)', whiteSpace: 'nowrap' }}>
             User: <strong>@{profile.username}</strong>
           </span>
-          <div className="mobile-header-actions">
+          <div className="header-actions">
             <button 
               className="btn btn-secondary" 
               onClick={handleSignOut}
