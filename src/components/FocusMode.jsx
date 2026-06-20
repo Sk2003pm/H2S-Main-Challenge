@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Timer, Play, Pause, RotateCcw, Volume2, VolumeX, Calendar, ShieldAlert } from 'lucide-react';
+import { Timer, Play, Pause, RotateCcw, Volume2, VolumeX, Calendar } from 'lucide-react';
 
-export default function FocusMode({ examProfile }) {
+export default function FocusMode({ examProfile, onTimerComplete, onTriggerAlert }) {
   // Timer States
   const [minutes, setMinutes] = useState(25);
   const [seconds, setSeconds] = useState(0);
@@ -27,7 +27,6 @@ export default function FocusMode({ examProfile }) {
       countdownIntervalRef.current = setInterval(() => {
         if (seconds === 0) {
           if (minutes === 0) {
-            // Timer complete!
             triggerTimerComplete();
             clearInterval(countdownIntervalRef.current);
           } else {
@@ -62,10 +61,23 @@ export default function FocusMode({ examProfile }) {
     } catch (e) {
       console.error(e);
     }
-    alert(mode === 'study' ? 'Time for a well-deserved 5-minute break!' : 'Break over! Ready to focus?');
+
     if (mode === 'study') {
+      if (onTimerComplete) onTimerComplete(); // rewards +50 XP
+      if (onTriggerAlert) {
+        onTriggerAlert(
+          "🍅 Pomodoro Completed! (+50 XP)",
+          "Incredible focus! You completed your 25-minute Pomodoro study chunk. Taking a 5-minute breather now prevents fatigue."
+        );
+      }
       setMode('break');
     } else {
+      if (onTriggerAlert) {
+        onTriggerAlert(
+          "🌸 Break Session Ended",
+          "You are fully recharged and ready. Let's return to our next focused topic block!"
+        );
+      }
       setMode('study');
     }
   };
@@ -87,7 +99,6 @@ export default function FocusMode({ examProfile }) {
   };
 
   // WEB AUDIO SYNTHESIS FOR FOCUS SOUNDS
-  // 100% self-contained noise / wave generators
   const initAudioContext = () => {
     if (!audioCtxRef.current) {
       audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
@@ -119,17 +130,14 @@ export default function FocusMode({ examProfile }) {
     initAudioContext();
     const ctx = audioCtxRef.current;
 
-    // Create merger to send different frequencies to left and right channels
     const merger = ctx.createChannelMerger(2);
     
-    // Left Osc: 200 Hz
     const oscL = ctx.createOscillator();
     oscL.frequency.value = 200;
     oscL.type = 'sine';
     
-    // Right Osc: 210 Hz (Creates a 10 Hz Alpha beat)
     const oscR = ctx.createOscillator();
-    oscR.frequency.value = 210;
+    oscR.frequency.value = 210; // creates 10Hz Alpha focus beats
     oscR.type = 'sine';
 
     const gainL = ctx.createGain();
@@ -152,7 +160,6 @@ export default function FocusMode({ examProfile }) {
     oscL.start();
     oscR.start();
 
-    // Wrap both oscillators in source ref to stop them together
     soundNodesRef.current.source = {
       stop: () => {
         oscL.stop();
@@ -167,7 +174,6 @@ export default function FocusMode({ examProfile }) {
     initAudioContext();
     const ctx = audioCtxRef.current;
 
-    // Generate White Noise Buffer
     const bufferSize = ctx.sampleRate * 2;
     const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
     const output = noiseBuffer.getChannelData(0);
@@ -175,36 +181,27 @@ export default function FocusMode({ examProfile }) {
       output[i] = Math.random() * 2 - 1;
     }
 
-    // Play White Noise
     const noiseSource = ctx.createBufferSource();
     noiseSource.buffer = noiseBuffer;
     noiseSource.loop = true;
 
-    // Filter white noise to create deep "rumble/wash"
     const lowpass = ctx.createBiquadFilter();
     lowpass.type = 'lowpass';
     lowpass.frequency.value = 350;
 
-    const bandpass = ctx.createBiquadFilter();
-    bandpass.type = 'bandpass';
-    bandpass.frequency.value = 400;
-    bandpass.Q.value = 1.0;
-
-    // Modulation (LFO) for wave washing effect
     const waveGain = ctx.createGain();
     waveGain.gain.value = 0.02;
 
     const lfo = ctx.createOscillator();
     lfo.type = 'sine';
-    lfo.frequency.value = 0.08; // extremely slow oscillation (once every 12 seconds)
+    lfo.frequency.value = 0.08;
 
     const lfoGain = ctx.createGain();
-    lfoGain.gain.value = 0.08; // mod depth
+    lfoGain.gain.value = 0.08;
 
     lfo.connect(lfoGain);
-    lfoGain.connect(waveGain.gain); // modulate gain of noise
+    lfoGain.connect(waveGain.gain);
 
-    // Connect nodes
     noiseSource.connect(lowpass);
     lowpass.connect(waveGain);
     waveGain.connect(ctx.destination);
@@ -230,7 +227,6 @@ export default function FocusMode({ examProfile }) {
     return () => stopFocusSounds();
   }, []);
 
-  // Countdown Helper
   const calculateDaysRemaining = () => {
     if (!examProfile || !examProfile.examDate) return null;
     const diff = new Date(examProfile.examDate) - new Date();

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Trash2, Heart, Sparkles, AlertCircle } from 'lucide-react';
+import { Send, Trash2, Heart, Sparkles } from 'lucide-react';
 import { storage } from '../utils/storage';
 
 const QUICK_CHIPS = [
@@ -10,7 +10,7 @@ const QUICK_CHIPS = [
   "What if I fail on exam day?"
 ];
 
-export default function ChatCompanion({ examProfile }) {
+export default function ChatCompanion({ examProfile, onTriggerConfirm }) {
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -18,12 +18,10 @@ export default function ChatCompanion({ examProfile }) {
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
-    // Load chat history from localStorage
     setMessages(storage.getChatMessages());
   }, []);
 
   useEffect(() => {
-    // Auto scroll to bottom when messages load/change
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
@@ -48,7 +46,6 @@ export default function ChatCompanion({ examProfile }) {
     setIsLoading(true);
 
     try {
-      // Collect triggers from recent journal logs if any to inject context
       const journalLogs = storage.getJournalLogs();
       const recentTriggers = journalLogs.length > 0 ? journalLogs[0].analysis.triggers : [];
       const currentStress = journalLogs.length > 0 ? journalLogs[0].stress_input : 50;
@@ -88,7 +85,7 @@ export default function ChatCompanion({ examProfile }) {
       console.error('Error sending message:', error);
       const errorMessage = {
         role: 'model',
-        content: '[Offline Mode] Hey. I am having a little trouble connecting right now, but please take a deep breath. Focus on inhaling for 4 seconds, holding for 4, and exhaling for 4. What is bothering you?',
+        content: 'Hey. I am having a little trouble connecting right now, but please take a deep breath. Focus on inhaling for 4 seconds, holding for 4, and exhaling for 4. What is bothering you?',
         timestamp: new Date().toISOString()
       };
       setMessages(prev => [...prev, errorMessage]);
@@ -104,7 +101,7 @@ export default function ChatCompanion({ examProfile }) {
   };
 
   const handleClearChat = () => {
-    if (window.confirm('Do you want to reset your chat conversation history?')) {
+    const clearAction = () => {
       const defaultChat = [
         {
           role: 'model',
@@ -114,12 +111,21 @@ export default function ChatCompanion({ examProfile }) {
       ];
       setMessages(defaultChat);
       storage.saveChatMessages(defaultChat);
+    };
+
+    if (onTriggerConfirm) {
+      onTriggerConfirm(
+        "Reset Chat History",
+        "Are you sure you want to clear your chat messages with Aura? This will reset your conversation logs.",
+        clearAction
+      );
+    } else {
+      clearAction();
     }
   };
 
   return (
     <div className="glass-panel chat-container">
-      {/* Chat Header */}
       <div className="chat-header">
         <div className="chat-avatar">
           <Heart size={20} color="white" />
@@ -142,7 +148,6 @@ export default function ChatCompanion({ examProfile }) {
         </button>
       </div>
 
-      {/* Chat Messages */}
       <div className="chat-messages">
         {messages.map((msg, idx) => (
           <div key={idx} className={`chat-bubble-wrapper ${msg.role === 'user' ? 'user' : 'model'}`}>
@@ -172,7 +177,6 @@ export default function ChatCompanion({ examProfile }) {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Quick Reply Chips */}
       <div className="chat-quick-chips">
         {QUICK_CHIPS.map((chip, idx) => (
           <button 
@@ -186,7 +190,6 @@ export default function ChatCompanion({ examProfile }) {
         ))}
       </div>
 
-      {/* Chat Input */}
       <div className="chat-input-area">
         <input
           type="text"

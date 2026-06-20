@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Wind, Play, Square, Settings, Compass } from 'lucide-react';
+import { Wind, Play, Square } from 'lucide-react';
 
 const BREATH_MODES = {
   BOX: {
@@ -23,7 +23,7 @@ const BREATH_MODES = {
   }
 };
 
-export default function BreathingBubble() {
+export default function BreathingBubble({ onCycleComplete, onTriggerAlert }) {
   const [modeKey, setModeKey] = useState('BOX');
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentStepIdx, setCurrentStepIdx] = useState(0);
@@ -39,18 +39,28 @@ export default function BreathingBubble() {
       timerRef.current = setInterval(() => {
         setSecondsRemaining((prev) => {
           if (prev <= 1) {
-            // Move to next step
             setCurrentStepIdx((idx) => {
               const nextIdx = (idx + 1) % mode.sequence.length;
-              // If we completed a full cycle (wrapped back to 0)
               if (nextIdx === 0) {
-                setTotalCyclesCompleted(c => c + 1);
+                // Cycle complete!
+                setTotalCyclesCompleted((c) => {
+                  const nextC = c + 1;
+                  // Award XP and save cycle counter to local storage
+                  if (onCycleComplete) {
+                    onCycleComplete();
+                  }
+                  try {
+                    const activeUser = localStorage.getItem('mindalign_active_user') || 'default';
+                    const storedBreaths = localStorage.getItem(`mindalign_breath_cycles_${activeUser}`) || '0';
+                    localStorage.setItem(`mindalign_breath_cycles_${activeUser}`, String(Number(storedBreaths) + 1));
+                  } catch (e) {}
+                  return nextC;
+                });
               }
-              // Set next step duration
               setSecondsRemaining(mode.sequence[nextIdx].duration);
               return nextIdx;
             });
-            return 0; // Temporary, will be overwritten by nextIdx duration immediately
+            return 0;
           }
           return prev - 1;
         });
@@ -64,12 +74,16 @@ export default function BreathingBubble() {
 
   const handleStartStop = () => {
     if (isPlaying) {
-      // Stop
       setIsPlaying(false);
       setCurrentStepIdx(0);
       setSecondsRemaining(mode.sequence[0].duration);
+      if (onTriggerAlert) {
+        onTriggerAlert(
+          "Breathing Stopped", 
+          `Session ended. You completed ${totalCyclesCompleted} cycles this turn! Short breathing patterns help oxygenate the cortex for better exam concentration.`
+        );
+      }
     } else {
-      // Start
       setIsPlaying(true);
       setCurrentStepIdx(0);
       setSecondsRemaining(mode.sequence[0].duration);
@@ -146,9 +160,10 @@ export default function BreathingBubble() {
           <div>
             <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Cycles Completed: </span>
             <strong style={{ color: 'var(--accent-teal)', fontSize: '1.1rem' }}>{totalCyclesCompleted}</strong>
+            <span className="badge badge-success" style={{ fontSize: '0.75rem', marginLeft: '0.5rem' }}>+30 XP each!</span>
           </div>
         ) : (
-          <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Click play to start breathing guide</span>
+          <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Click begin to start breathing guide</span>
         )}
       </div>
 

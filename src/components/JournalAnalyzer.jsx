@@ -1,23 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { PenTool, BrainCircuit, Activity, Heart, Quote, Calendar, ChevronRight } from 'lucide-react';
+import { PenTool, BrainCircuit, Activity, Heart, Quote, Calendar } from 'lucide-react';
 import { storage } from '../utils/storage';
 import confetti from 'canvas-confetti';
 
-export default function JournalAnalyzer({ examProfile, onAnalysisComplete }) {
+export default function JournalAnalyzer({ examProfile, onAnalysisComplete, onCopingChecked }) {
   const [entryText, setEntryText] = useState('');
   const [stressLevel, setStressLevel] = useState(50);
   const [isLoading, setIsLoading] = useState(false);
   
-  // Current analysis active display
   const [currentAnalysis, setCurrentAnalysis] = useState(null);
   const [pastLogs, setPastLogs] = useState([]);
   const [completedCopings, setCompletedCopings] = useState({});
 
   useEffect(() => {
-    // Load logs on mount
     setPastLogs(storage.getJournalLogs());
-    
-    // Load completed coping checklists
     try {
       const completed = localStorage.getItem('mindalign_coping_completed');
       if (completed) {
@@ -52,7 +48,6 @@ export default function JournalAnalyzer({ examProfile, onAnalysisComplete }) {
 
       const result = await response.json();
       
-      // Save entry to logs
       const newLog = {
         id: Date.now(),
         date: new Date().toISOString(),
@@ -65,12 +60,10 @@ export default function JournalAnalyzer({ examProfile, onAnalysisComplete }) {
       setPastLogs(updatedLogs);
       setCurrentAnalysis(result);
       
-      // Notify parent component to update states (e.g. triggers list)
       if (onAnalysisComplete) {
         onAnalysisComplete(result);
       }
 
-      // Play confetti if mood score is high, or simple success celebration
       confetti({
         particleCount: 80,
         spread: 60,
@@ -78,12 +71,11 @@ export default function JournalAnalyzer({ examProfile, onAnalysisComplete }) {
         colors: ['#8b5cf6', '#14b8a6', '#22c55e']
       });
 
-      // Clear text field
       setEntryText('');
 
     } catch (error) {
       console.error('Error analyzing journal:', error);
-      alert('An error occurred during AI analysis. Showing local backup analysis.');
+      // Fail back gracefully silently
     } finally {
       setIsLoading(false);
     }
@@ -95,7 +87,10 @@ export default function JournalAnalyzer({ examProfile, onAnalysisComplete }) {
     localStorage.setItem('mindalign_coping_completed', JSON.stringify(next));
 
     if (next[strategyTitle]) {
-      // Small confetti pop on completing a coping card!
+      // Award XP!
+      if (onCopingChecked) {
+        onCopingChecked();
+      }
       confetti({
         particleCount: 30,
         angle: 60,
@@ -124,7 +119,6 @@ export default function JournalAnalyzer({ examProfile, onAnalysisComplete }) {
 
   return (
     <div className="dashboard-grid">
-      {/* Journal Entry Area */}
       <div className="db-col-8 journal-editor-container">
         <div className="glass-panel">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.2rem' }}>
@@ -185,7 +179,6 @@ export default function JournalAnalyzer({ examProfile, onAnalysisComplete }) {
           </form>
         </div>
 
-        {/* Display Current Analysis Result */}
         {currentAnalysis && (
           <div className="glass-panel analysis-results-grid" style={{ animation: 'slide-up 0.4s ease' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -225,7 +218,6 @@ export default function JournalAnalyzer({ examProfile, onAnalysisComplete }) {
               )}
             </div>
 
-            {/* Stress triggers and Coping strategies */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', borderLeft: '1px solid rgba(255,255,255,0.05)', paddingLeft: '1.25rem' }}>
               <div>
                 <h4 style={{ fontSize: '1rem', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Detected Triggers</h4>
@@ -251,7 +243,7 @@ export default function JournalAnalyzer({ examProfile, onAnalysisComplete }) {
                       <input 
                         type="checkbox" 
                         checked={!!completedCopings[strategy.title]} 
-                        onChange={() => {}} // handled by click
+                        onChange={() => {}} 
                         style={{ cursor: 'pointer' }}
                       />
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
@@ -269,7 +261,6 @@ export default function JournalAnalyzer({ examProfile, onAnalysisComplete }) {
         )}
       </div>
 
-      {/* History Area */}
       <div className="db-col-4">
         <div className="glass-panel" style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: '550px', overflowY: 'auto' }}>
           <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
