@@ -15,13 +15,15 @@ import {
   ShieldCheck,
   CheckCircle,
   HelpCircle,
-  Brain
+  Brain,
+  Gamepad2
 } from 'lucide-react';
 import { storage } from './utils/storage';
 import BreathingBubble from './components/BreathingBubble';
 import FocusMode from './components/FocusMode';
 import JournalAnalyzer from './components/JournalAnalyzer';
 import ChatCompanion from './components/ChatCompanion';
+import StressBusterGame from './components/StressBusterGame';
 import confetti from 'canvas-confetti';
 
 export default function App() {
@@ -655,6 +657,14 @@ export default function App() {
           <span>Breathing</span>
         </button>
 
+        <button 
+          className={`nav-link ${activeTab === 'stress-buster' ? 'active' : ''}`} 
+          onClick={() => setActiveTab('stress-buster')}
+        >
+          <Gamepad2 />
+          <span>Stress Buster</span>
+        </button>
+
         <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center', width: '100%' }}>
           <button 
             className="nav-link" 
@@ -891,6 +901,12 @@ export default function App() {
           <div style={{ maxWidth: '600px', margin: '0 auto', width: '100%' }}>
             <BreathingBubble onCycleComplete={() => rewardXp(30, "Breathing Cycle Done")} onTriggerAlert={triggerAlert} />
           </div>
+        </div>
+      )}
+
+      {activeTab === 'stress-buster' && (
+        <div style={{ animation: 'slide-up var(--transition-normal) ease' }}>
+          <StressBusterGame examProfile={profile} onXpReward={rewardXp} onTriggerAlert={triggerAlert} />
         </div>
       )}
 
