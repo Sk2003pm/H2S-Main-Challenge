@@ -51,11 +51,16 @@ MindAlign is a Generative AI-powered digital wellness application built specific
    * Wellness actions earn XP points (Mood logs +15 XP, Journaling +40 XP, Coping tasks +20 XP, Breathing +30 XP, Pomodoro +50 XP, popping balloons +XP, answering quiz correctly +25 XP).
    * Ascend through wellness levels (Mindful Rookie -> Zen Scholar -> Focus Guru -> Calm Conqueror -> Ascended Sage) with high-fidelity glassmorphism modal congratulations and confetti.
 
+9. **🎙️ "Aura Live" Voice & Video Wellness Speaker**:
+   * Interactive webcam preview bubble with real-time video stream.
+   * Speech-to-Text (STT) voice capture and Text-to-Speech (TTS) counseling responses read aloud.
+   * Screen transcripts and visual closed captions for accessibility.
+
 ---
 
 ## 🛠️ Technology Stack
 
-* **Frontend**: React (Vite compilation), Lucide React (Icons), Canvas Confetti (Celebrations).
+* **Frontend**: React (Vite compilation), Lucide React (Icons), Canvas Confetti (Celebrations), Vitest (Unit testing).
 * **Styling**: Vanilla CSS (Calming dark-mode theme, CSS variables design token system, responsive flexbox/grid layouts, custom scrollbars, and fluid glassmorphic card patterns).
 * **Backend**: FastAPI (Python), Google Generative AI (Gemini integration), Pydantic schemas.
 * **Serverless Deployment**: Vercel Serverless Functions (`vercel.json` rewrites `/api/*` to Python serverless runtimes).
@@ -122,14 +127,15 @@ To run the full-stack setup locally, run the frontend and backend servers concur
 * **GenAI Cascade Failback**: Prompts use a robust cascading fallback executor in Python, trying preferred models (`gemini-2.5-pro` -> `gemini-1.5-flash` -> `gemini-2.0-flash` etc.) and defaulting to local regex metrics if quota limits are exceeded.
 
 ### 4. Testing (Functionality Validation)
+* **Frontend Unit Tests (Vitest)**: Comprehensive storage layer, registration, login sessions, and database sandboxing unit tests passing successfully.
+* **Backend Unit Tests (Python)**: Expanded FastAPI test suite (`test_main.py`) validating endpoint responses, fallbacks, pydantic request parameters, and stress thresholds.
 * **Compile Verification**: The production bundle compiles cleanly (`npm run build`) in seconds.
-* **Local Run Sandbox**: Full local development configuration using uvicorn and Vite proxies.
-* **Custom Verification Routine**: Monitored using internal subagents to verify responsive navigation state bounds and quiz rendering options.
 
 ### 5. Accessibility & Inclusivity (Inclusive Design)
-* **Contrasting Calming Palette**: Custom HSL dark-mode theme utilizing high-contrast, accessible ratios for screen readability.
-* **Semantic HTML**: Fully built using native, semantic elements (`header`, `nav`, `section`, input labels) supporting screen readers.
-* **Adaptive Navigation**: Bottom navbar switches elements intelligently on mobile viewports (< 1024px) to ensure no controls overlap, providing a mobile header Sign Out button alternative.
+* **Visual Focus Rings**: Custom `:focus-visible` outline styles draw high-visibility highlights during keyboard tab traversal.
+* **Keyboard Triggers**: Native button controls and keyboard press handlers for stress-popping balloon actions.
+* **Semantic Attributes**: Aria pressed indicators (`aria-pressed`), current indicators (`aria-current`), and screen-reader descriptive labels.
+* **Form & Checkbox Association**: Mapped unique matching `id`/`htmlFor` labels to avoid missing form relationships.
 
 ---
 
