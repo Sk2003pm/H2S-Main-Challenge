@@ -55,16 +55,16 @@ class CopingStrategy(BaseModel):
     description: str
 
 class JournalAnalysisResponse(BaseModel):
-    mood_score: int = Field(..., description="Calculated wellness/mood score from 1 (very low) to 100 (excellent).")
-    primary_emotions: List[str] = Field(..., description="List of primary emotions detected.")
-    triggers: List[str] = Field(..., description="List of identified stress triggers (e.g. peer pressure, syllabus, exhaustion).")
-    analysis_summary: str = Field(..., description="Empathetic, deep AI analysis of the student's entry.")
-    coping_strategies: List[CopingStrategy] = Field(..., description="Personalized, actionable wellness strategies.")
-    milestone_encouragement: str = Field(..., description="Tailored encouragement referencing their specific exam.")
+    mood_score: int
+    primary_emotions: List[str]
+    triggers: List[str]
+    analysis_summary: str
+    coping_strategies: List[CopingStrategy]
+    milestone_encouragement: str
 
 class ChatMessage(BaseModel):
-    role: str = Field(..., description="The speaker: 'user' or 'model'/'assistant'")
-    content: str = Field(..., description="The message content.")
+    role: str
+    content: str
 
 class StudentContext(BaseModel):
     exam: str
@@ -72,19 +72,23 @@ class StudentContext(BaseModel):
     recent_triggers: Optional[List[str]] = []
 
 class ChatRequest(BaseModel):
-    messages: List[ChatMessage] = Field(..., min_items=1)
+    messages: List[ChatMessage]
     student_context: StudentContext
 
-class MindfulnessRequest(BaseModel):
-    triggers: List[str] = Field(..., min_items=1)
-    duration_minutes: int = Field(5, ge=1, le=20)
+class DailyTipRequest(BaseModel):
+    exam: str
+    triggers: List[str]
+    current_stress: int
 
-# Local fallback data generator in case Gemini is offline/unconfigured
+class QuizRequest(BaseModel):
+    exam: str
+    triggers: List[str]
+
+# Local fallback data generators
 def get_fallback_journal_analysis(text: str, exam: str, current_stress: int) -> Dict[str, Any]:
     text_lower = text.lower()
     triggers = []
     
-    # Identify basic triggers from text keyword matching
     if any(k in text_lower for k in ["mock", "test", "score", "marks", "fail"]):
         triggers.append("Mock Test Performance")
     if any(k in text_lower for k in ["syllabus", "backlog", "time", "finish", "revision", "chapters"]):
@@ -93,39 +97,28 @@ def get_fallback_journal_analysis(text: str, exam: str, current_stress: int) -> 
         triggers.append("Physical Fatigue / Sleep Deprivation")
     if any(k in text_lower for k in ["parent", "friend", "teacher", "peer", "compare", "expectation"]):
         triggers.append("Social/Family Expectations")
-    if any(k in text_lower for k in ["forget", "remember", "blank", "mind"]):
-        triggers.append("Exam Hall Anxiety & Memory Doubts")
         
     if not triggers:
         triggers.append("General Exam Anxiety")
         
-    # Simple mood estimation based on input stress and content length
     mood_score = max(10, 100 - current_stress)
-    if "sad" in text_lower or "cry" in text_lower or "hopeless" in text_lower:
-        mood_score = min(mood_score, 30)
-        emotions = ["Anxiety", "Sadness", "Overwhelm"]
-    elif "angry" in text_lower or "frustrated" in text_lower:
-        mood_score = min(mood_score, 40)
-        emotions = ["Frustration", "Irritability", "Pressure"]
-    else:
-        emotions = ["Stress", "Apprehension", "Determination"]
-
+    
     return {
         "mood_score": mood_score,
-        "primary_emotions": emotions,
+        "primary_emotions": ["Anxiety", "Pressure"],
         "triggers": triggers,
-        "analysis_summary": f"Based on your thoughts regarding {exam}, it seems like you are holding a lot of pressure. Writing it down is a courageous first step. We detected stress factors pointing to {', '.join(triggers)}. Remember, exam preparation is a marathon, and what you are feeling is a common reaction to high-stakes expectations.",
+        "analysis_summary": f"Your thoughts about {exam} reflect significant preparation pressure. Identifying {', '.join(triggers)} helps you address them step-by-step.",
         "coping_strategies": [
             {
                 "title": "5-Minute Grounding",
-                "description": "Engage in box breathing to immediately slow down your racing heart. Inhale for 4 seconds, hold for 4, exhale for 4, and hold for 4."
+                "description": "Slow down your heart rate using box breathing."
             },
             {
-                "title": "Break it Down",
-                "description": "If syllabus load is overwhelming, stop looking at the entire subject list. Pick exactly ONE small topic, set a timer for 25 minutes, and focus only on that."
+                "title": "Topic Chunking",
+                "description": "Break study sessions into 25-minute Pomodoros."
             }
         ],
-        "milestone_encouragement": f"You are preparing for {exam}, one of the toughest tests. But remember, {exam} is a measure of your preparation on a specific day, not a definition of your worth or future potential. Take a deep breath—you are capable of taking this step-by-step."
+        "milestone_encouragement": f"Preparing for {exam} takes daily perseverance. Take it one question at a time."
     }
 
 def get_fallback_chat_reply(message: str, exam: str) -> str:
@@ -134,14 +127,7 @@ def get_fallback_chat_reply(message: str, exam: str) -> str:
         return ("It sounds like you are going through an incredibly dark and difficult time. Please know that you are not alone and there is support available. "
                 "I strongly encourage you to connect with professional help immediately. In India, you can call Vandrevala Foundation Helpline at +91 9999 666 555 "
                 "or Kiran Helpline at 1800-599-0019. Please reach out to them or a trusted adult right now.")
-    
-    if "fail" in msg_lower or "score" in msg_lower:
-        return f"It is completely natural to feel down after a mock test or while worrying about failing {exam}. A low score is simply diagnostic data—it tells you what to review, not who you are. Give yourself permission to have a bad test and focus on incremental growth."
-    
-    if "sleep" in msg_lower or "tired" in msg_lower:
-        return "Sleep is not a reward for studying; it is a neurological requirement to consolidate your learning. If you don't sleep, your brain cannot retrieve the formulas or concepts you read today. Try aiming for at least 6.5-7 hours tonight."
-        
-    return f"I hear you. Preparing for {exam} can feel like carrying the weight of the world. What is one small thing we can do right now to make you feel slightly more comfortable? Maybe a stretch, or a cup of water?"
+    return f"Preparing for {exam} can feel overwhelming. Take a short 2-minute break, drink some water, and remember that your well-being comes first."
 
 # Endpoints
 @app.get("/api/health")
@@ -155,15 +141,10 @@ def health_check():
 @app.post("/api/analyze-journal")
 async def analyze_journal(request: JournalRequest):
     if not API_KEY:
-        # Fallback mode
-        logger.info("Using local fallback generator for journal analysis")
-        fallback_data = get_fallback_journal_analysis(request.text, request.exam, request.current_stress)
-        return fallback_data
+        return get_fallback_journal_analysis(request.text, request.exam, request.current_stress)
         
     try:
-        # Initialize the model
         model = genai.GenerativeModel(MODEL_NAME)
-        
         prompt = f"""
 You are a highly empathetic, trained student wellness counselor specializing in high-stakes exam anxiety (JEE, NEET, UPSC, etc.).
 Analyze this journal entry from a student preparing for the {request.exam} exam.
@@ -174,41 +155,30 @@ Journal Entry:
 {request.text}
 \"\"\"
 
-Perform a deep emotional analysis and output a structured JSON response. Do not add any markdown formatting (like ```json) in your final response - output raw JSON content only.
-
+Output a structured JSON response. Do not add markdown formatting.
 Your JSON structure must contain exactly these keys:
-- "mood_score": integer (1 to 100, where 100 is excellent and 1 is severe crisis/distress)
-- "primary_emotions": list of strings (e.g. "Anxiety", "Determination", "Guilt", "Burnout")
-- "triggers": list of strings (uncover hidden stress triggers, e.g. "Peer Comparison", "Mock Test Backlog", "Sleep Deprivation", "Family Pressure", "Imposter Syndrome")
-- "analysis_summary": string (an empathetic, non-judgmental, insightful analysis explaining why they feel this way)
-- "coping_strategies": list of 2-3 objects, each having "title" and "description" (provide highly personalized, practical, immediate coping steps tailored to their triggers)
-- "milestone_encouragement": string (a short, highly motivating, contextual quote or message that refers to their preparation for {request.exam})
+- "mood_score": integer (1 to 100)
+- "primary_emotions": list of strings
+- "triggers": list of strings (e.g. "Mock Test Backlog", "Syllabus Load", "Sleep Deprivation", "Family Pressure")
+- "analysis_summary": string (empathetic analysis explaining why they feel this way)
+- "coping_strategies": list of 2-3 objects, each having "title" and "description"
+- "milestone_encouragement": string (short motivational message for their {request.exam} exam)
 
-Ensure that you treat safety as priority. If self-harm is detected, include crisis helpline numbers in India (like Vandrevala Foundation: +91 9999 666 555) in the analysis_summary and lower the mood_score.
+If self-harm is detected, include crisis helpline numbers in India (like Vandrevala Foundation: +91 9999 666 555) in the analysis_summary and lower the mood_score.
 """
-
         response = model.generate_content(
             prompt,
             generation_config={"response_mime_type": "application/json"}
         )
-        
-        result_text = response.text.strip()
-        # Parse output safely
-        data = json.loads(result_text)
-        return data
-        
+        return json.loads(response.text.strip())
     except Exception as e:
         logger.error(f"Error calling Gemini API: {str(e)}")
-        # Fallback gracefully
-        fallback_data = get_fallback_journal_analysis(request.text, request.exam, request.current_stress)
-        fallback_data["analysis_summary"] = f"[AI service degraded, using offline analysis] {fallback_data['analysis_summary']}"
-        return fallback_data
+        return get_fallback_journal_analysis(request.text, request.exam, request.current_stress)
 
 @app.post("/api/chat-companion")
 async def chat_companion(request: ChatRequest):
     last_msg = request.messages[-1].content
     
-    # Check for safety concerns in fallback or prompt
     if not API_KEY:
         reply = get_fallback_chat_reply(last_msg, request.student_context.exam)
         return {"reply": reply}
@@ -216,24 +186,17 @@ async def chat_companion(request: ChatRequest):
     try:
         model = genai.GenerativeModel(MODEL_NAME)
         
-        # Format the chat history for Gemini API
-        # Gemini API expects format: list of parts, we can translate roles to "user" and "model"
-        formatted_history = []
-        
-        # System instructions
         system_instruction = f"""
 You are "Aura", a warm, empathetic, and expert digital wellness companion for students preparing for high-stakes examinations like {request.student_context.exam}.
 The student's self-reported stress level is {request.student_context.current_stress}/100.
 Their recent triggers include: {', '.join(request.student_context.recent_triggers or [])}.
 
 Your instructions:
-- Provide empathetic, warm, validation first. Avoid sounding like a generic corporate AI. Use friendly, supporting words.
-- Give short, readable responses (2-4 sentences max per response) to keep it conversational. Do not overwhelm them with walls of text.
-- Recommend actionable, immediate steps: stretching, water, a 2-minute focus break, or quick breathing.
-- CRITICAL SAFETY: If the student indicates intentions of self-harm, suicidal ideation, or extreme clinical depression, you MUST provide crisis helpline numbers immediately (e.g. Vandrevala Foundation Helpline: +91 9999 666 555 or Kiran Helpline: 1800-599-0019) and encourage them to speak to a professional or a parent.
+- Provide empathetic, warm validation. Speak supportively.
+- Give short, readable responses (2-4 sentences max per response) to keep it conversational.
+- Recommend actionable, immediate steps: stretching, water, breathing, or study chunk breaks.
+- CRITICAL SAFETY: If the student indicates intentions of self-harm, you MUST provide crisis helpline numbers immediately (e.g. Vandrevala Foundation Helpline: +91 9999 666 555) and encourage them to speak to a professional.
 """
-
-        # Construct the context prompt with history
         prompt_parts = [system_instruction, "\nConversation History:\n"]
         for msg in request.messages[:-1]:
             speaker = "Student" if msg.role == "user" else "Aura"
@@ -243,64 +206,93 @@ Your instructions:
         prompt_parts.append("Aura: (Reply empathetically and concisely)")
         
         prompt = "\n".join(prompt_parts)
-        
         response = model.generate_content(prompt)
-        reply = response.text.strip()
-        
-        return {"reply": reply}
-        
+        return {"reply": response.text.strip()}
     except Exception as e:
         logger.error(f"Error in chat companion: {str(e)}")
         reply = get_fallback_chat_reply(last_msg, request.student_context.exam)
         return {"reply": f"[Offline Mode] {reply}"}
 
-@app.post("/api/mindfulness-session")
-async def generate_mindfulness(request: MindfulnessRequest):
+# NEW ENDPOINT: Dynamic AI study & relaxation tips generator
+@app.post("/api/daily-tips")
+async def generate_daily_tips(request: DailyTipRequest):
     if not API_KEY:
         return {
-            "title": "Exam Mind Rest",
-            "steps": [
-                "Sit comfortably, close your eyes, and place your hands on your lap.",
-                "Observe the physical sensation of sitting: the contact of your body with the chair.",
-                f"Release tension in your shoulders that has accumulated from study stress ({', '.join(request.triggers)}).",
-                "Focus on the natural inflow and outflow of your breath. Do not force it.",
-                "Gently open your eyes when you feel centered and ready to return."
-            ],
-            "affirmation": "My exam preparation does not define my peace of mind."
+            "focus_tip": f"Divide your {request.exam} chapters into active revision segments. Tackle high-yield concepts first.",
+            "relaxation_tip": "Roll your shoulders back and close your eyes for 2 minutes to reset cognitive load.",
+            "affirmation": "My preparation progress is gradual and valuable."
         }
         
     try:
         model = genai.GenerativeModel(MODEL_NAME)
-        
         prompt = f"""
-Generate a custom mindfulness meditation session for a student preparing for competitive exams.
-Their current stress triggers are: {', '.join(request.triggers)}.
-The session should last around {request.duration_minutes} minutes.
+Generate personalized study focus and relaxation advice for a student preparing for the {request.exam} exam.
+Their current stress triggers are: {', '.join(request.triggers or ['general anxiety'])}.
+Their self-reported stress level is {request.current_stress}/100.
 
 Output a structured JSON response. Do not add markdown formatting.
-JSON structure must have exactly these keys:
-- "title": string (calming, attractive name, e.g. "Quieting the MCQ Storm")
-- "steps": list of 4-5 strings (step-by-step guidance on how to practice this session)
-- "affirmation": string (a short, powerful, positive affirmation that helps them release guilt about resting)
+JSON structure must contain exactly these keys:
+- "focus_tip": string (a highly specific active study tip for the {request.exam} syllabus or time management)
+- "relaxation_tip": string (a specific relaxation or physical grounding advice based on their stress triggers)
+- "affirmation": string (a positive mindset affirmation)
 """
-
         response = model.generate_content(
             prompt,
             generation_config={"response_mime_type": "application/json"}
         )
-        
-        data = json.loads(response.text.strip())
-        return data
-        
+        return json.loads(response.text.strip())
     except Exception as e:
-        logger.error(f"Error generating mindfulness: {str(e)}")
+        logger.error(f"Error generating daily tips: {str(e)}")
         return {
-            "title": "Calming Exam Stress Session",
-            "steps": [
-                "Sit in a quiet space and roll your shoulders back to let go of physical fatigue.",
-                f"Focus on the current stressors: {', '.join(request.triggers)}. Acknowledge them, and let them fade into the background.",
-                "Take 5 deep breaths, counting slowly: inhale for 4 seconds, exhale for 4 seconds.",
-                "Remind yourself that mock scores are just numbers; your learning is continuous."
+            "focus_tip": f"Divide your {request.exam} chapters into active revision segments. Tackle high-yield concepts first.",
+            "relaxation_tip": "Roll your shoulders back and close your eyes for 2 minutes to reset cognitive load.",
+            "affirmation": "My preparation progress is gradual and valuable."
+        }
+
+# NEW ENDPOINT: Dynamic AI Zen Brain Quiz generator (MCQ quiz)
+@app.post("/api/generate-quiz")
+async def generate_quiz(request: QuizRequest):
+    if not API_KEY:
+        # Fallback to local quiz questions list
+        return {
+            "question": "Why is taking a active 5-minute break every 25 minutes of study (Pomodoro) highly effective for retrieval?",
+            "options": [
+                "It resets your neural paths and allows focus memory consolidation.",
+                "It allows you to study faster and cram more details.",
+                "It has no physiological impact; it just wastes study time."
             ],
-            "affirmation": "I am doing my best, and that is more than enough."
+            "correct_idx": 0,
+            "explanation": "Consolidation happens when the brain rests. High intensity study without short pauses causes interference, leading to faster forgetting of equations and concepts."
+        }
+        
+    try:
+        model = genai.GenerativeModel(MODEL_NAME)
+        prompt = f"""
+Generate an engaging, single multiple-choice question (MCQ) for a student preparing for {request.exam}.
+The question should focus on study science, memory retrieval psychology, sleep hygiene, or stress biology.
+Their stress triggers include: {', '.join(request.triggers or ['general exam pressure'])}.
+
+Output a structured JSON response. Do not add markdown formatting.
+JSON structure must contain exactly these keys:
+- "question": string (the question text, e.g. relating to active recall, spaced repetition, or cognitive fatigue)
+- "options": list of exactly 3 strings (representing choices)
+- "correct_idx": integer (0, 1, or 2 representing the index of correct choice in options list)
+- "explanation": string (a short explanation why the correct answer is scientific and helpful)
+"""
+        response = model.generate_content(
+            prompt,
+            generation_config={"response_mime_type": "application/json"}
+        )
+        return json.loads(response.text.strip())
+    except Exception as e:
+        logger.error(f"Error generating daily quiz: {str(e)}")
+        return {
+            "question": "Why is taking a active 5-minute break every 25 minutes of study (Pomodoro) highly effective for retrieval?",
+            "options": [
+                "It resets your neural paths and allows focus memory consolidation.",
+                "It allows you to study faster and cram more details.",
+                "It has no physiological impact; it just wastes study time."
+            ],
+            "correct_idx": 0,
+            "explanation": "Consolidation happens when the brain rests. High intensity study without short pauses causes interference, leading to faster forgetting of equations and concepts."
         }

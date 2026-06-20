@@ -5,7 +5,6 @@ import {
   BookOpen, 
   MessageSquare, 
   Wind, 
-  User, 
   LogOut, 
   Activity, 
   Sparkles, 
@@ -14,10 +13,10 @@ import {
   Lock,
   UserCheck,
   ShieldCheck,
-  Info,
   CheckCircle,
   HelpCircle,
-  TrendingUp
+  TrendingUp,
+  Brain
 } from 'lucide-react';
 import { storage } from './utils/storage';
 import BreathingBubble from './components/BreathingBubble';
@@ -26,44 +25,11 @@ import JournalAnalyzer from './components/JournalAnalyzer';
 import ChatCompanion from './components/ChatCompanion';
 import confetti from 'canvas-confetti';
 
-const ZEN_QUIZZES = [
-  {
-    id: 1,
-    question: "Why is taking a active 5-minute break every 25 minutes of study (Pomodoro) highly effective for retrieval?",
-    options: [
-      { text: "It resets your neural paths and allows focus memory consolidation.", isCorrect: true },
-      { text: "It allows you to study faster and cram more details.", isCorrect: false },
-      { text: "It has no physiological impact; it just wastes study time.", isCorrect: false }
-    ],
-    explanation: "Consolidation happens when the brain rests. High intensity study without short pauses causes interference, leading to faster forgetting of equations and concepts."
-  },
-  {
-    id: 2,
-    question: "How does deep slow exhalation (like in 4-7-8 breathing) reduce sudden exam panic?",
-    options: [
-      { text: "It alerts the prefrontal cortex to study harder.", isCorrect: false },
-      { text: "It activates the parasympathetic nervous system, lowering heart rate.", isCorrect: true },
-      { text: "It temporarily reduces oxygen levels to make you sleepy.", isCorrect: false }
-    ],
-    explanation: "Deep exhalations stimulate the vagus nerve, which tells your heart and brain that you are safe. This reduces cortisol and shuts off the 'fight-or-flight' stress reaction."
-  },
-  {
-    id: 3,
-    question: "Why is pulling an 'all-nighter' right before a major board exam or test counterproductive?",
-    options: [
-      { text: "It prevents REM and deep sleep cycles where mock memories are organized and saved.", isCorrect: true },
-      { text: "It makes you too confident, leading to careless mistakes.", isCorrect: false },
-      { text: "It causes your eyes to hurt during the test.", isCorrect: false }
-    ],
-    explanation: "Without sleep, the hippocampus cannot transfer what you studied into long-term retrieval centers. You will likely experience brain fog or blank out under stress."
-  }
-];
-
 export default function App() {
   const [profile, setProfile] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard');
   
-  // Auth view switcher: 'login' or 'signup'
+  // Auth view switcher
   const [authMode, setAuthMode] = useState('login');
   
   // Auth Form Inputs
@@ -88,10 +54,16 @@ export default function App() {
   const [level, setLevel] = useState(1);
   const [levelTitle, setLevelTitle] = useState('Mindful Rookie');
 
-  // Quiz States
-  const [selectedQuizIdx, setSelectedQuizIdx] = useState(0);
+  // Dynamic AI-Generated Quiz & Tips
+  const [dailyTips, setDailyTips] = useState({
+    focus_tip: 'Tackle your highest yield exam topics in active revision intervals.',
+    relaxation_tip: 'Roll your shoulders back, close your eyes, and take three box breathing steps.',
+    affirmation: 'I am taking charge of my wellness step-by-step.'
+  });
+  const [quizQuestion, setQuizQuestion] = useState(null);
   const [selectedAnswerIdx, setSelectedAnswerIdx] = useState(null);
   const [quizCompleted, setQuizCompleted] = useState(false);
+  const [isQuizLoading, setIsQuizLoading] = useState(false);
 
   // Dashboard Metrics
   const [stats, setStats] = useState({
@@ -114,7 +86,6 @@ export default function App() {
   ];
 
   useEffect(() => {
-    // Check if user session is active on mount
     const activeUser = storage.getActiveUser();
     if (activeUser) {
       setProfile(activeUser);
@@ -125,6 +96,7 @@ export default function App() {
   useEffect(() => {
     if (profile) {
       calculateStats();
+      fetchDailyTipsAndQuiz();
     }
   }, [profile]);
 
@@ -133,28 +105,78 @@ export default function App() {
       const storedXp = localStorage.getItem(`mindalign_xp_${username}`) || '0';
       const storedLvl = localStorage.getItem(`mindalign_lvl_${username}`) || '1';
       
-      const currentXp = Number(storedXp);
-      const currentLvl = Number(storedLvl);
-      
-      setXp(currentXp);
-      setLevel(currentLvl);
-      setLevelTitle(getLevelName(currentLvl));
+      setXp(Number(storedXp));
+      setLevel(Number(storedLvl));
+      setLevelTitle(getLevelName(Number(storedLvl)));
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
-      // Load quiz state
-      const quizDone = localStorage.getItem(`mindalign_quiz_done_${username}`);
+  const fetchDailyTipsAndQuiz = async () => {
+    if (!profile) return;
+    setIsQuizLoading(true);
+
+    const logs = storage.getJournalLogs();
+    const recentTriggers = logs.length > 0 ? logs[0].analysis.triggers : [];
+    const currentStress = logs.length > 0 ? logs[0].stress_input : 50;
+
+    // 1. Fetch AI Daily Tips
+    try {
+      const tipsRes = await fetch('/api/daily-tips', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          exam: profile.exam,
+          triggers: recentTriggers,
+          current_stress: currentStress
+        })
+      });
+      if (tipsRes.ok) {
+        const data = await tipsRes.json();
+        setDailyTips(data);
+      }
+    } catch (e) {
+      console.error("Error loading daily tips:", e);
+    }
+
+    // 2. Fetch or restore AI Zen Quiz
+    try {
+      const quizDone = localStorage.getItem(`mindalign_quiz_done_${profile.username}`);
       if (quizDone) {
         setQuizCompleted(true);
-        const ans = localStorage.getItem(`mindalign_quiz_ans_${username}`);
+        const ans = localStorage.getItem(`mindalign_quiz_ans_${profile.username}`);
         if (ans !== null) setSelectedAnswerIdx(Number(ans));
-      } else {
-        // Pick quiz based on day
-        const day = new Date().getDate();
-        setSelectedQuizIdx(day % ZEN_QUIZZES.length);
+        
+        // Restore question content
+        const savedQ = localStorage.getItem(`mindalign_quiz_q_${profile.username}`);
+        if (savedQ) {
+          setQuizQuestion(JSON.parse(savedQ));
+          setIsQuizLoading(false);
+          return;
+        }
+      }
+
+      // Generate a new dynamic question using Gemini
+      const quizRes = await fetch('/api/generate-quiz', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          exam: profile.exam,
+          triggers: recentTriggers
+        })
+      });
+      if (quizRes.ok) {
+        const data = await quizRes.json();
+        setQuizQuestion(data);
+        localStorage.setItem(`mindalign_quiz_q_${profile.username}`, JSON.stringify(data));
         setQuizCompleted(false);
         setSelectedAnswerIdx(null);
       }
     } catch (e) {
-      console.error(e);
+      console.error("Error loading daily quiz:", e);
+    } finally {
+      setIsQuizLoading(false);
     }
   };
 
@@ -199,12 +221,10 @@ export default function App() {
         newXp = newXp - xpNeeded;
         currentLvl += 1;
         
-        // Save level up
         localStorage.setItem(`mindalign_lvl_${username}`, String(currentLvl));
         setLevel(currentLvl);
         setLevelTitle(getLevelName(currentLvl));
 
-        // Celebrations!
         confetti({
           particleCount: 200,
           spread: 100,
@@ -320,6 +340,10 @@ export default function App() {
       "CAUTION: WIPE ENTIRE APP",
       "This will permanently delete all registered accounts, hashed passwords, local journals, and statistics. This cannot be undone. Proceed?",
       () => {
+        // Clear all local states
+        localStorage.removeItem(`mindalign_quiz_done_${profile?.username}`);
+        localStorage.removeItem(`mindalign_quiz_ans_${profile?.username}`);
+        localStorage.removeItem(`mindalign_quiz_q_${profile?.username}`);
         storage.clearAllData();
         setProfile(null);
         setActiveTab('dashboard');
@@ -331,6 +355,7 @@ export default function App() {
   const handleJournalAnalyzed = () => {
     calculateStats();
     rewardXp(40, "Expressive Journaling");
+    fetchDailyTipsAndQuiz(); // refresh tips based on newly extracted triggers
   };
 
   const handleQuickCheckinMoodSelection = () => {
@@ -364,13 +389,14 @@ export default function App() {
           { title: "Box Breathing", description: "Practice a quick 2-minute cycle to center yourself." },
           { title: "Chat Companion", description: "Talk to Aura for some positive reinforcement." }
         ],
-        milestone_encouragement: `Keep studying. Small efforts every day add up to success in your ${profile.exam}.`
+        milestone_encouragement: `Keep studying. Small efforts every day add up to success in your {profile.exam}.`
       }
     };
 
     storage.addJournalLog(newLog);
     calculateStats();
     rewardXp(15, "Mood Check-in");
+    fetchDailyTipsAndQuiz(); // refresh
     confetti({
       particleCount: 50,
       spread: 50,
@@ -378,17 +404,15 @@ export default function App() {
     });
   };
 
-  // Quiz submission handler
+  // Quiz Answer selection
   const handleSelectQuizAnswer = (ansIdx) => {
-    if (quizCompleted) return;
+    if (quizCompleted || !quizQuestion) return;
     
     setSelectedAnswerIdx(ansIdx);
     setQuizCompleted(true);
     
-    const activeQuiz = ZEN_QUIZZES[selectedQuizIdx];
-    const isCorrect = activeQuiz.options[ansIdx].isCorrect;
+    const isCorrect = quizQuestion.correct_idx === ansIdx;
 
-    // Save states
     localStorage.setItem(`mindalign_quiz_done_${profile.username}`, 'true');
     localStorage.setItem(`mindalign_quiz_ans_${profile.username}`, String(ansIdx));
 
@@ -399,183 +423,13 @@ export default function App() {
         spread: 45,
         colors: ['#22c55e', '#14b8a6']
       });
-      triggerAlert("✨ CORRECT RESPONSE!", `Excellent logic! +25 XP earned. ${activeQuiz.explanation}`);
+      triggerAlert("✨ CORRECT RESPONSE!", `Excellent logic! +25 XP earned. ${quizQuestion.explanation}`);
     } else {
       rewardXp(10, "Zen Brain Quiz Participation");
-      triggerAlert("💡 ANSWER REVIEW", `Not quite, but you still earn +10 XP for participating! ${activeQuiz.explanation}`);
+      triggerAlert("💡 ANSWER REVIEW", `Not quite, but you still earn +10 XP for participating! ${quizQuestion.explanation}`);
     }
   };
 
-  // Onboarding & Authentication Interface
-  if (!profile) {
-    return (
-      <div className="setup-container" style={{ margin: '3.5rem auto' }}>
-        <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', alignItems: 'center' }}>
-            <Heart size={32} className="text-teal" />
-            <h1 style={{ fontSize: '2.5rem', fontWeight: '800' }} className="text-gradient">MindAlign</h1>
-          </div>
-          <p className="text-muted">Empathetic AI Companion for Competitive Exam Aspirants</p>
-        </div>
-
-        {/* Toggle between Login and Signup */}
-        <div style={{ display: 'flex', background: 'rgba(255,255,255,0.03)', padding: '4px', borderRadius: 'var(--border-radius-md)', border: 'var(--border-light)' }}>
-          <button 
-            type="button" 
-            className={`btn btn-secondary ${authMode === 'login' ? 'active' : ''}`}
-            onClick={() => setAuthMode('login')}
-            style={{ flex: 1, padding: '0.6rem', border: 'none', background: authMode === 'login' ? 'rgba(255,255,255,0.06)' : 'transparent' }}
-          >
-            Sign In
-          </button>
-          <button 
-            type="button" 
-            className={`btn btn-secondary ${authMode === 'signup' ? 'active' : ''}`}
-            onClick={() => setAuthMode('signup')}
-            style={{ flex: 1, padding: '0.6rem', border: 'none', background: authMode === 'signup' ? 'rgba(255,255,255,0.06)' : 'transparent' }}
-          >
-            Register Account
-          </button>
-        </div>
-
-        {authMode === 'login' ? (
-          <form className="glass-panel" onSubmit={handleLoginSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            <h3 style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem', fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Lock size={18} className="text-teal" /> Sign In to Your Companion
-            </h3>
-
-            <div className="form-group">
-              <label>Username</label>
-              <input 
-                type="text" 
-                className="input-field" 
-                placeholder="e.g. skand" 
-                value={usernameInput}
-                onChange={(e) => setUsernameInput(e.target.value)}
-                required 
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Password</label>
-              <input 
-                type="password" 
-                className="input-field" 
-                placeholder="••••••" 
-                value={passwordInput}
-                onChange={(e) => setPasswordInput(e.target.value)}
-                required 
-              />
-            </div>
-
-            <button type="submit" className="btn btn-teal" style={{ width: '100%', marginTop: '0.5rem' }}>
-              Authenticate
-            </button>
-          </form>
-        ) : (
-          <form className="glass-panel" onSubmit={handleSignupSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            <h3 style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem', fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <UserCheck size={18} className="text-violet" /> Create Wellness Account
-            </h3>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <div className="form-group">
-                <label>Username</label>
-                <input 
-                  type="text" 
-                  className="input-field" 
-                  placeholder="e.g. skand" 
-                  value={usernameInput}
-                  onChange={(e) => setUsernameInput(e.target.value)}
-                  required 
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Password (Min. 6 chars)</label>
-                <input 
-                  type="password" 
-                  className="input-field" 
-                  placeholder="••••••" 
-                  value={passwordInput}
-                  onChange={(e) => setPasswordInput(e.target.value)}
-                  required 
-                />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label>Full Name / Nickname</label>
-              <input 
-                type="text" 
-                className="input-field" 
-                placeholder="e.g. Skand Mishra" 
-                value={setupName}
-                onChange={(e) => setSetupName(e.target.value)}
-                required 
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Select Profile Avatar</label>
-              <div className="avatar-grid">
-                {avatars.map((av) => (
-                  <div 
-                    key={av} 
-                    className={`avatar-option ${setupAvatar === av ? 'selected' : ''}`}
-                    onClick={() => setSetupAvatar(av)}
-                  >
-                    {av}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label>Target Competitive Exam</label>
-              <select 
-                className="input-field" 
-                style={{ backgroundColor: 'var(--bg-tertiary)' }}
-                value={setupExam}
-                onChange={(e) => setSetupExam(e.target.value)}
-              >
-                {exams.map((ex) => (
-                  <option key={ex} value={ex}>{ex}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label>Exam Date (Used for Timeline Countdown)</label>
-              <input 
-                type="date" 
-                className="input-field" 
-                value={setupDate}
-                onChange={(e) => setSetupDate(e.target.value)}
-                required 
-              />
-            </div>
-
-            <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '0.5rem' }}>
-              Register & Setup Profile
-            </button>
-          </form>
-        )}
-
-        <div className="glass-panel" style={{ padding: '0.75rem 1rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-          <ShieldCheck size={28} className="text-teal" style={{ flexShrink: 0 }} />
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: '1.3' }}>
-            <strong>Security Protocol:</strong> All student accounts and journal text credentials are secure and saved offline-first. Gemini processing occurs directly via secure serverless nodes.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  // Active Quiz Object
-  const currentQuiz = ZEN_QUIZZES[selectedQuizIdx];
-
-  // Authenticated Dashboard Layout
   return (
     <div className="app-container">
       {/* Sidebar Navigation */}
@@ -638,7 +492,7 @@ export default function App() {
         </div>
       </nav>
 
-      {/* Header Bar with Gamified Level Metrics */}
+      {/* Header Bar */}
       <header className="glass-panel" style={{ padding: '1rem 1.5rem', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <span style={{ fontSize: '2.2rem' }}>{profile.avatar}</span>
@@ -676,6 +530,25 @@ export default function App() {
           
           <div className="db-col-8" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             
+            {/* AI-Generated Dynamic Study/Relaxation Tips */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div className="glass-panel" style={{ borderLeft: '4px solid var(--accent-violet)', display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                <Brain className="text-violet" size={24} style={{ flexShrink: 0 }} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                  <span style={{ fontSize: '0.8rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>AI Dynamic Focus Tip</span>
+                  <p style={{ fontSize: '0.85rem', lineHeight: '1.4', color: 'var(--text-secondary)' }}>{dailyTips.focus_tip}</p>
+                </div>
+              </div>
+
+              <div className="glass-panel" style={{ borderLeft: '4px solid var(--accent-teal)', display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                <Sparkles className="text-teal" size={24} style={{ flexShrink: 0 }} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                  <span style={{ fontSize: '0.8rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>AI Stress-Reliever</span>
+                  <p style={{ fontSize: '0.85rem', lineHeight: '1.4', color: 'var(--text-secondary)' }}>{dailyTips.relaxation_tip}</p>
+                </div>
+              </div>
+            </div>
+
             {/* Quick mood check-in */}
             <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               <div className="flex-between">
@@ -731,12 +604,12 @@ export default function App() {
                 </button>
               </div>
 
-              <button className="btn btn-teal" onClick={handleQuickCheckinMoodSelection} style={{ alignSelf: 'center', width: '100%', maxWidth: '240px' }}>
+              <button className="btn btn-teal" onClick={submitQuickCheckin} style={{ alignSelf: 'center', width: '100%', maxWidth: '240px' }}>
                 Save My State
               </button>
             </div>
 
-            {/* Zen Brain Quiz (Gamification Question) */}
+            {/* AI Zen Brain Quiz (Gamified Question) */}
             <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div className="flex-between">
                 <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
@@ -745,37 +618,46 @@ export default function App() {
                 <span className="badge badge-violet" style={{ fontSize: '0.75rem' }}>+25 XP</span>
               </div>
               <p className="text-muted" style={{ fontSize: '0.9rem', lineHeight: '1.4' }}>
-                Answer today's retrieval psychology check-in to build academic resilience and earn wellness points!
+                Answer today's active retrieval psychology check-in to build academic resilience and earn wellness points!
               </p>
               
-              <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: 'var(--border-radius-sm)', border: 'var(--border-light)' }}>
-                <strong style={{ fontSize: '0.95rem', color: 'var(--text-primary)', display: 'block', marginBottom: '1rem' }}>
-                  {currentQuiz.question}
-                </strong>
-                
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                  {currentQuiz.options.map((opt, oIdx) => {
-                    const isSelected = selectedAnswerIdx === oIdx;
-                    let btnClass = 'quiz-option-btn';
-                    if (quizCompleted) {
-                      if (opt.isCorrect) btnClass += ' selected-correct';
-                      else if (isSelected) btnClass += ' selected-incorrect';
-                    }
-
-                    return (
-                      <button
-                        key={oIdx}
-                        className={btnClass}
-                        onClick={() => handleSelectQuizAnswer(oIdx)}
-                        disabled={quizCompleted}
-                      >
-                        <span style={{ fontSize: '0.85rem', textAlign: 'left' }}>{opt.text}</span>
-                        {quizCompleted && opt.isCorrect && <CheckCircle size={16} color="#4ade80" />}
-                      </button>
-                    );
-                  })}
+              {isQuizLoading ? (
+                <div className="flex-center" style={{ padding: '2rem', flexDirection: 'column', gap: '0.5rem' }}>
+                  <div className="spinner"></div>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Generating custom quiz via Gemini...</span>
                 </div>
-              </div>
+              ) : quizQuestion ? (
+                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: 'var(--border-radius-sm)', border: 'var(--border-light)' }}>
+                  <strong style={{ fontSize: '0.95rem', color: 'var(--text-primary)', display: 'block', marginBottom: '1rem' }}>
+                    {quizQuestion.question}
+                  </strong>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    {quizQuestion.options.map((opt, oIdx) => {
+                      const isSelected = selectedAnswerIdx === oIdx;
+                      let btnClass = 'quiz-option-btn';
+                      if (quizCompleted) {
+                        if (quizQuestion.correct_idx === oIdx) btnClass += ' selected-correct';
+                        else if (isSelected) btnClass += ' selected-incorrect';
+                      }
+
+                      return (
+                        <button
+                          key={oIdx}
+                          className={btnClass}
+                          onClick={() => handleSelectQuizAnswer(oIdx)}
+                          disabled={quizCompleted}
+                        >
+                          <span style={{ fontSize: '0.85rem', textAlign: 'left' }}>{opt}</span>
+                          {quizCompleted && quizQuestion.correct_idx === oIdx && <CheckCircle size={16} color="#4ade80" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-muted" style={{ fontSize: '0.85rem', textAlign: 'center' }}>No quiz active. Complete a journal analysis first!</p>
+              )}
             </div>
 
             {/* Stats widgets */}
@@ -816,7 +698,7 @@ export default function App() {
 
       {activeTab === 'chat' && (
         <div style={{ animation: 'slide-up var(--transition-normal) ease' }}>
-          <ChatCompanion examProfile={profile} />
+          <ChatCompanion examProfile={profile} onTriggerConfirm={triggerConfirm} />
         </div>
       )}
 
