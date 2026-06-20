@@ -15,7 +15,6 @@ import {
   ShieldCheck,
   CheckCircle,
   HelpCircle,
-  TrendingUp,
   Brain
 } from 'lucide-react';
 import { storage } from './utils/storage';
@@ -148,7 +147,6 @@ export default function App() {
         const ans = localStorage.getItem(`mindalign_quiz_ans_${profile.username}`);
         if (ans !== null) setSelectedAnswerIdx(Number(ans));
         
-        // Restore question content
         const savedQ = localStorage.getItem(`mindalign_quiz_q_${profile.username}`);
         if (savedQ) {
           setQuizQuestion(JSON.parse(savedQ));
@@ -340,10 +338,11 @@ export default function App() {
       "CAUTION: WIPE ENTIRE APP",
       "This will permanently delete all registered accounts, hashed passwords, local journals, and statistics. This cannot be undone. Proceed?",
       () => {
-        // Clear all local states
-        localStorage.removeItem(`mindalign_quiz_done_${profile?.username}`);
-        localStorage.removeItem(`mindalign_quiz_ans_${profile?.username}`);
-        localStorage.removeItem(`mindalign_quiz_q_${profile?.username}`);
+        if (profile) {
+          localStorage.removeItem(`mindalign_quiz_done_${profile.username}`);
+          localStorage.removeItem(`mindalign_quiz_ans_${profile.username}`);
+          localStorage.removeItem(`mindalign_quiz_q_${profile.username}`);
+        }
         storage.clearAllData();
         setProfile(null);
         setActiveTab('dashboard');
@@ -355,7 +354,7 @@ export default function App() {
   const handleJournalAnalyzed = () => {
     calculateStats();
     rewardXp(40, "Expressive Journaling");
-    fetchDailyTipsAndQuiz(); // refresh tips based on newly extracted triggers
+    fetchDailyTipsAndQuiz(); // refresh tips
   };
 
   const handleQuickCheckinMoodSelection = () => {
@@ -389,7 +388,7 @@ export default function App() {
           { title: "Box Breathing", description: "Practice a quick 2-minute cycle to center yourself." },
           { title: "Chat Companion", description: "Talk to Aura for some positive reinforcement." }
         ],
-        milestone_encouragement: `Keep studying. Small efforts every day add up to success in your {profile.exam}.`
+        milestone_encouragement: `Keep studying. Small efforts every day add up to success in your ${profile.exam}.`
       }
     };
 
@@ -430,6 +429,191 @@ export default function App() {
     }
   };
 
+  // Render Login & Signup onboarding if user is not authenticated
+  if (!profile) {
+    return (
+      <div className="setup-container" style={{ margin: '3.5rem auto' }}>
+        <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', alignItems: 'center' }}>
+            <Heart size={32} className="text-teal" />
+            <h1 style={{ fontSize: '2.5rem', fontWeight: '800' }} className="text-gradient">MindAlign</h1>
+          </div>
+          <p className="text-muted">Empathetic AI Companion for Competitive Exam Aspirants</p>
+        </div>
+
+        {/* Toggle between Login and Signup */}
+        <div style={{ display: 'flex', background: 'rgba(255, 255, 255, 0.03)', padding: '4px', borderRadius: 'var(--border-radius-md)', border: 'var(--border-light)' }}>
+          <button 
+            type="button" 
+            className={`btn btn-secondary ${authMode === 'login' ? 'active' : ''}`}
+            onClick={() => setAuthMode('login')}
+            style={{ flex: 1, padding: '0.6rem', border: 'none', background: authMode === 'login' ? 'rgba(255,255,255,0.06)' : 'transparent' }}
+          >
+            Sign In
+          </button>
+          <button 
+            type="button" 
+            className={`btn btn-secondary ${authMode === 'signup' ? 'active' : ''}`}
+            onClick={() => setAuthMode('signup')}
+            style={{ flex: 1, padding: '0.6rem', border: 'none', background: authMode === 'signup' ? 'rgba(255,255,255,0.06)' : 'transparent' }}
+          >
+            Register Account
+          </button>
+        </div>
+
+        {authMode === 'login' ? (
+          <form className="glass-panel" onSubmit={handleLoginSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <h3 style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem', fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Lock size={18} className="text-teal" /> Sign In to Your Companion
+            </h3>
+
+            <div className="form-group">
+              <label>Username</label>
+              <input 
+                type="text" 
+                className="input-field" 
+                placeholder="e.g. skand" 
+                value={usernameInput}
+                onChange={(e) => setUsernameInput(e.target.value)}
+                required 
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Password</label>
+              <input 
+                type="password" 
+                className="input-field" 
+                placeholder="••••••" 
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                required 
+              />
+            </div>
+
+            <button type="submit" className="btn btn-teal" style={{ width: '100%', marginTop: '0.5rem' }}>
+              Authenticate
+            </button>
+          </form>
+        ) : (
+          <form className="glass-panel" onSubmit={handleSignupSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <h3 style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem', fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <UserCheck size={18} className="text-violet" /> Create Wellness Account
+            </h3>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div className="form-group">
+                <label>Username</label>
+                <input 
+                  type="text" 
+                  className="input-field" 
+                  placeholder="e.g. skand" 
+                  value={usernameInput}
+                  onChange={(e) => setUsernameInput(e.target.value)}
+                  required 
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Password (Min. 6 chars)</label>
+                <input 
+                  type="password" 
+                  className="input-field" 
+                  placeholder="••••••" 
+                  value={passwordInput}
+                  onChange={(e) => setPasswordInput(e.target.value)}
+                  required 
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label>Full Name / Nickname</label>
+              <input 
+                type="text" 
+                className="input-field" 
+                placeholder="e.g. Skand Mishra" 
+                value={setupName}
+                onChange={(e) => setSetupName(e.target.value)}
+                required 
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Select Profile Avatar</label>
+              <div className="avatar-grid">
+                {avatars.map((av) => (
+                  <div 
+                    key={av} 
+                    className={`avatar-option ${setupAvatar === av ? 'selected' : ''}`}
+                    onClick={() => setSetupAvatar(av)}
+                  >
+                    {av}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label>Target Competitive Exam</label>
+              <select 
+                className="input-field" 
+                style={{ backgroundColor: 'var(--bg-tertiary)' }}
+                value={setupExam}
+                onChange={(e) => setSetupExam(e.target.value)}
+              >
+                {exams.map((ex) => (
+                  <option key={ex} value={ex}>{ex}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>Exam Date (Used for Timeline Countdown)</label>
+              <input 
+                type="date" 
+                className="input-field" 
+                value={setupDate}
+                onChange={(e) => setSetupDate(e.target.value)}
+                required 
+              />
+            </div>
+
+            <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '0.5rem' }}>
+              Register & Setup Profile
+            </button>
+          </form>
+        )}
+
+        <div className="glass-panel" style={{ padding: '0.75rem 1rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <ShieldCheck size={28} className="text-teal" style={{ flexShrink: 0 }} />
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: '1.3' }}>
+            <strong>Security Protocol:</strong> All student accounts and journal text credentials are secure and saved offline-first. Gemini processing occurs directly via secure serverless nodes.
+          </p>
+        </div>
+
+        {/* Modal display for auth screen alert overlays */}
+        {modal.isOpen && (
+          <div className="modal-overlay">
+            <div className="modal-card">
+              <div className="modal-header">
+                <Sparkles size={18} className="text-teal" />
+                <span>{modal.title}</span>
+              </div>
+              <div className="modal-body">{modal.message}</div>
+              <div className="modal-actions">
+                <button className="btn btn-teal" onClick={() => setModal({ ...modal, isOpen: false })}>
+                  Acknowledge
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Authenticated Dashboard Layout
   return (
     <div className="app-container">
       {/* Sidebar Navigation */}
@@ -492,7 +676,7 @@ export default function App() {
         </div>
       </nav>
 
-      {/* Header Bar */}
+      {/* Header Bar with Gamified Level Metrics */}
       <header className="glass-panel" style={{ padding: '1rem 1.5rem', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <span style={{ fontSize: '2.2rem' }}>{profile.avatar}</span>
@@ -604,7 +788,7 @@ export default function App() {
                 </button>
               </div>
 
-              <button className="btn btn-teal" onClick={submitQuickCheckin} style={{ alignSelf: 'center', width: '100%', maxWidth: '240px' }}>
+              <button className="btn btn-teal" onClick={handleQuickCheckinMoodSelection} style={{ alignSelf: 'center', width: '100%', maxWidth: '240px' }}>
                 Save My State
               </button>
             </div>
