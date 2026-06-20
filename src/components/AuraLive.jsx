@@ -9,7 +9,7 @@ export default function AuraLive({ examProfile, onTriggerConfirm }) {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [captions, setCaptions] = useState([]);
-  
+
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const recognitionRef = useRef(null);
@@ -62,7 +62,7 @@ export default function AuraLive({ examProfile, onTriggerConfirm }) {
       // Stop listening while we call backend and speak
       rec.stop();
       setIsListening(false);
-      
+
       await handleAuraQuery(speechText);
     };
 
@@ -99,7 +99,7 @@ export default function AuraLive({ examProfile, onTriggerConfirm }) {
       // Use the existing chat messages list for full history, or just seed a brief history
       const history = storage.getChatMessages();
       const newMessages = [...history, { role: 'user', content: queryText }];
-      
+
       const response = await fetch('/api/chat-companion', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -116,7 +116,7 @@ export default function AuraLive({ examProfile, onTriggerConfirm }) {
       if (!response.ok) throw new Error('API failed');
 
       const data = await response.json();
-      
+
       // Save full chat history back to storage
       storage.saveChatMessages([...newMessages, { role: 'model', content: data.reply }]);
 
@@ -156,13 +156,13 @@ export default function AuraLive({ examProfile, onTriggerConfirm }) {
     // Remove brackets from text for fallback notes (e.g. "[Offline Mode]") so TTS reads cleanly
     const cleanText = text.replace(/\[.*?\]/g, "").trim();
 
-    const utterance = new SpeechUtterance(cleanText);
+    const utterance = new SpeechSynthesisUtterance(cleanText);
     synthesisUtteranceRef.current = utterance;
 
     // Set voice options (look for a nice natural Google or default female/male voice)
     const voices = window.speechSynthesis.getVoices();
-    const preferredVoice = voices.find(v => 
-      (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Microsoft')) && 
+    const preferredVoice = voices.find(v =>
+      (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Microsoft')) &&
       v.lang.startsWith('en')
     );
     if (preferredVoice) {
@@ -178,7 +178,7 @@ export default function AuraLive({ examProfile, onTriggerConfirm }) {
       if (recognitionRef.current) {
         try {
           recognitionRef.current.stop();
-        } catch (e) {}
+        } catch (e) { }
       }
     };
 
@@ -200,7 +200,7 @@ export default function AuraLive({ examProfile, onTriggerConfirm }) {
       if (isActive && recognitionRef.current) {
         try {
           recognitionRef.current.start();
-        } catch (err) {}
+        } catch (err) { }
       }
     };
 
@@ -252,7 +252,7 @@ export default function AuraLive({ examProfile, onTriggerConfirm }) {
       setIsActive(true);
       setCaptions([]);
       await startCamera();
-      
+
       const welcome = `Welcome to Aura Live! I'm your digital counseling speaker. I can hear your voice and talk back. How are you feeling about your ${examProfile?.exam || 'competitive exams'} today?`;
       setCaptions([{
         id: Date.now(),
@@ -292,7 +292,7 @@ export default function AuraLive({ examProfile, onTriggerConfirm }) {
       }
       try {
         recognitionRef.current.start();
-      } catch (err) {}
+      } catch (err) { }
     }
   };
 
@@ -301,25 +301,25 @@ export default function AuraLive({ examProfile, onTriggerConfirm }) {
 
   return (
     <div className="aura-live-grid" style={{ animation: 'slide-up var(--transition-normal) ease' }}>
-      
+
       {/* Camera & Controls Panel */}
       <div className="glass-panel camera-panel text-center">
         <h4 style={{ margin: 0, color: 'var(--text-primary)' }}>Live Webcam Feed</h4>
-        
-        <div 
+
+        <div
           className={`camera-bubble-container ${isListening ? 'listening' : ''} ${isSpeaking ? 'speaking' : ''}`}
           style={{ width: '200px', height: '200px' }}
         >
-          {cameraActive ? (
-            <video 
-              ref={videoRef}
-              autoPlay 
-              playsInline 
-              muted 
-              className="camera-video"
-              aria-label="Student live webcam view"
-            />
-          ) : (
+          <video 
+            ref={videoRef}
+            autoPlay 
+            playsInline 
+            muted 
+            className="camera-video"
+            style={{ display: cameraActive ? 'block' : 'none' }}
+            aria-label="Student live webcam view"
+          />
+          {!cameraActive && (
             <div className="camera-placeholder text-muted">🧘</div>
           )}
         </div>
@@ -350,8 +350,8 @@ export default function AuraLive({ examProfile, onTriggerConfirm }) {
         )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%', marginTop: '0.5rem' }}>
-          <button 
-            onClick={toggleSession} 
+          <button
+            onClick={toggleSession}
             className={`btn ${isActive ? 'btn-danger' : 'btn-teal'}`}
             style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
             aria-pressed={isActive}
@@ -371,11 +371,11 @@ export default function AuraLive({ examProfile, onTriggerConfirm }) {
           {isActive && (
             <button 
               onClick={handleManualMicToggle} 
-              className={`btn ${isListening ? 'btn-primary' : 'btn-secondary'}`}
+              className={`btn ${isListening ? 'btn-teal' : 'btn-secondary'}`}
               style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
               disabled={isSpeaking || isLoading}
               aria-pressed={isListening}
-              aria-label={isListening ? "Mute Microphone" : "Unmute Microphone"}
+              aria-label={isListening ? "Listening active, click to pause" : "Click to Speak"}
             >
               {isListening ? (
                 <>
@@ -383,7 +383,7 @@ export default function AuraLive({ examProfile, onTriggerConfirm }) {
                 </>
               ) : (
                 <>
-                  <MicOff size={16} /> Microphone Off
+                  <Mic size={16} /> Tap to Speak
                 </>
               )}
             </button>
