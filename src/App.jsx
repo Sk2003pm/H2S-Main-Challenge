@@ -555,14 +555,6 @@ export default function App() {
             <LogOut size={20} />
             <span>Sign Out</span>
           </button>
-          <button
-            className="nav-link"
-            onClick={handleWipeAll}
-            style={{ opacity: 0.5, fontSize: '0.65rem' }}
-            title="Clear all local databases"
-          >
-            <span>Wipe DB</span>
-          </button>
         </div>
       </nav>
 
