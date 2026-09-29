@@ -335,13 +335,6 @@ export default function DimensionalAnalysisVisualizer({
           </span>
         </div>
       )}
-
-      {/* Interactive Helper Hint */}
-      {!isAnalyzing && (
-        <div style={{ textAlign: 'center', marginTop: '0.25rem', fontSize: '0.68rem', color: 'var(--text-muted)' }}>
-          ✨ Drag or hover mouse over 3D particle torus to inspect emotional coordinates
-        </div>
-      )}
     </div>
   );
 }

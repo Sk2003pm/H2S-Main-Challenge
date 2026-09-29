@@ -144,19 +144,6 @@ export default function ThreeDimensionalAuthPortal({
               isSubmitting={isSubmitting} 
             />
           </div>
-
-          {/* Minimalist interactive hint */}
-          <div style={{
-            fontSize: '0.78rem',
-            color: '#64748b',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            marginTop: '0.25rem'
-          }}>
-            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#00f5d4', display: 'inline-block', boxShadow: '0 0 6px #00f5d4' }} />
-            <span>Interactive 3D Hologram • Drag cursor to rotate</span>
-          </div>
         </div>
 
         {/* Right Side: Modern Vibrant Authentication Card */}
