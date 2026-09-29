@@ -73,10 +73,10 @@ export default function StressBusterGame({ examProfile, onXpReward, onTriggerAle
     
     // Calm pastel colors
     const colors = [
-      'rgba(239, 68, 68, 0.7)',  // soft red
+      'rgba(244, 63, 94, 0.7)',  // soft rose
       'rgba(245, 158, 11, 0.7)', // soft orange
       'rgba(139, 92, 246, 0.7)', // soft purple
-      'rgba(20, 184, 166, 0.7)', // soft teal
+      'rgba(99, 102, 241, 0.7)', // soft indigo
       'rgba(59, 130, 246, 0.7)'  // soft blue
     ];
     const color = colors[Math.floor(Math.random() * colors.length)];
@@ -194,11 +194,11 @@ export default function StressBusterGame({ examProfile, onXpReward, onTriggerAle
     <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', height: '620px' }}>
       <div className="flex-between">
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Gamepad2 className="text-teal" size={24} />
+          <Gamepad2 className="text-rose" size={24} />
           <h3>Zen Stress Buster</h3>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Score: <strong style={{ color: 'var(--accent-teal)' }}>{score}</strong></span>
+          <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Score: <strong style={{ color: 'var(--accent-rose)' }}>{score}</strong></span>
           <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Busted: <strong style={{ color: 'var(--accent-violet)' }}>{poppedCount}/10</strong></span>
         </div>
       </div>
@@ -225,14 +225,14 @@ export default function StressBusterGame({ examProfile, onXpReward, onTriggerAle
       >
         {!isPlaying ? (
           <div style={{ zIndex: 10, textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center', padding: '2rem' }}>
-            <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'var(--accent-teal-glow)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Heart className="text-teal" size={32} />
+            <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'var(--accent-rose-glow)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Heart className="text-rose" size={32} />
             </div>
             <h4>Ready to Bust Some Stress?</h4>
             <p className="text-muted" style={{ fontSize: '0.8rem', maxWidth: '300px', lineHeight: '1.4' }}>
               Floating balloons carry stressful thoughts customized for your {examProfile?.exam || 'exams'}. Pop them to earn XP and read positive affirmations.
             </p>
-            <button className="btn btn-teal" onClick={startGame}>
+            <button className="btn btn-rose" onClick={startGame}>
               <Play size={16} /> Start Stress Buster
             </button>
           </div>
@@ -292,8 +292,8 @@ export default function StressBusterGame({ examProfile, onXpReward, onTriggerAle
           className="glass-panel" 
           style={{ 
             padding: '0.75rem 1rem', 
-            background: 'var(--accent-teal-glow)', 
-            border: '1px solid var(--accent-teal)', 
+            background: 'var(--accent-rose-glow)', 
+            border: '1px solid var(--accent-rose)', 
             borderRadius: 'var(--border-radius-sm)', 
             display: 'flex', 
             alignItems: 'center', 
@@ -301,8 +301,8 @@ export default function StressBusterGame({ examProfile, onXpReward, onTriggerAle
             animation: 'slide-up 0.2s ease-out' 
           }}
         >
-          <Sparkles className="text-teal" size={16} style={{ flexShrink: 0 }} />
-          <span style={{ fontSize: '0.85rem', fontWeight: '500', color: '#2dd4bf', lineHeight: '1.4' }}>
+          <Sparkles className="text-rose" size={16} style={{ flexShrink: 0 }} />
+          <span style={{ fontSize: '0.85rem', fontWeight: '500', color: '#fb7185', lineHeight: '1.4' }}>
             {affirmation}
           </span>
         </div>

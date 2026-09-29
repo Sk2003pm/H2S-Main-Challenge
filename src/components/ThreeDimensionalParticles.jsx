@@ -47,8 +47,8 @@ export default function ThreeDimensionalParticles({
 
     const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
     gradient.addColorStop(0, 'rgba(255, 255, 255, 1.0)');
-    gradient.addColorStop(0.2, 'rgba(0, 245, 212, 0.95)');
-    gradient.addColorStop(0.5, 'rgba(247, 37, 133, 0.4)');
+    gradient.addColorStop(0.25, 'rgba(59, 130, 246, 0.95)');
+    gradient.addColorStop(0.55, 'rgba(236, 72, 153, 0.45)');
     gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
 
     ctx.fillStyle = gradient;
@@ -93,7 +93,7 @@ export default function ThreeDimensionalParticles({
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
-    // 4. Neural Particle Distribution
+    // 4. Neural Particle Distribution (Sapphire Blue, Rose Pink, Amethyst Violet, Solar Gold, Royal Indigo)
     const PARTICLE_COUNT = 1500;
     const geometry = new THREE.BufferGeometry();
     const positions = new Float32Array(PARTICLE_COUNT * 3);
@@ -102,12 +102,11 @@ export default function ThreeDimensionalParticles({
     const sizes = new Float32Array(PARTICLE_COUNT);
     const phases = new Float32Array(PARTICLE_COUNT);
 
-    // Rich colourful palette: Cyan, Magenta, Purple, Gold, Emerald
-    const colorCyan = new THREE.Color('#00f5d4');
-    const colorMagenta = new THREE.Color('#f72585');
-    const colorPurple = new THREE.Color('#7209b7');
-    const colorGold = new THREE.Color('#ffb703');
-    const colorBlue = new THREE.Color('#4361ee');
+    const colorSapphire = new THREE.Color('#3b82f6');
+    const colorRose = new THREE.Color('#ec4899');
+    const colorAmethyst = new THREE.Color('#8b5cf6');
+    const colorGold = new THREE.Color('#f59e0b');
+    const colorIndigo = new THREE.Color('#6366f1');
 
     for (let i = 0; i < PARTICLE_COUNT; i++) {
       const i3 = i * 3;
@@ -132,17 +131,17 @@ export default function ThreeDimensionalParticles({
       phases[i] = Math.random() * Math.PI * 2;
       sizes[i] = 10 + Math.random() * 20;
 
-      // Multi-chromatic neural distribution
+      // Multi-chromatic neural distribution without neon green
       const pColor = new THREE.Color();
       const rand = Math.random();
       if (rand < 0.35) {
-        pColor.lerpColors(colorCyan, colorBlue, Math.random());
+        pColor.lerpColors(colorSapphire, colorIndigo, Math.random());
       } else if (rand < 0.7) {
-        pColor.lerpColors(colorMagenta, colorPurple, Math.random());
+        pColor.lerpColors(colorRose, colorAmethyst, Math.random());
       } else if (rand < 0.88) {
-        pColor.lerpColors(colorPurple, colorCyan, Math.random());
+        pColor.lerpColors(colorAmethyst, colorSapphire, Math.random());
       } else {
-        pColor.lerpColors(colorGold, colorMagenta, Math.random());
+        pColor.lerpColors(colorGold, colorRose, Math.random());
       }
 
       colors[i3] = pColor.r;
@@ -306,12 +305,12 @@ export default function ThreeDimensionalParticles({
               linePosArr[lIdx + 5] = pArr[j3 + 2];
 
               const alpha = 1.0 - Math.sqrt(distSq) / 134;
-              lineColArr[lIdx] = 0.0 * alpha;
-              lineColArr[lIdx + 1] = 0.96 * alpha;
-              lineColArr[lIdx + 2] = 0.83 * alpha;
-              lineColArr[lIdx + 3] = 0.97 * alpha;
-              lineColArr[lIdx + 4] = 0.15 * alpha;
-              lineColArr[lIdx + 5] = 0.52 * alpha;
+              lineColArr[lIdx] = 0.23 * alpha;
+              lineColArr[lIdx + 1] = 0.51 * alpha;
+              lineColArr[lIdx + 2] = 0.96 * alpha;
+              lineColArr[lIdx + 3] = 0.92 * alpha;
+              lineColArr[lIdx + 4] = 0.28 * alpha;
+              lineColArr[lIdx + 5] = 0.60 * alpha;
 
               lineCount++;
             }
@@ -320,9 +319,9 @@ export default function ThreeDimensionalParticles({
 
         // Active analyzing resonance
         if (analyzing) {
-          cArr[i3] = 0.1 + Math.sin(elapsedTime * 4 + phase) * 0.2;
-          cArr[i3 + 1] = 0.9;
-          cArr[i3 + 2] = 0.8;
+          cArr[i3] = 0.35 + Math.sin(elapsedTime * 4 + phase) * 0.2;
+          cArr[i3 + 1] = 0.60;
+          cArr[i3 + 2] = 1.0;
         }
 
         // Shockwave deflection

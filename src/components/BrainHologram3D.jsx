@@ -70,13 +70,13 @@ export default function BrainHologram3D({
     const sizes = new Float32Array(BRAIN_PARTICLE_COUNT);
     const phases = new Float32Array(BRAIN_PARTICLE_COUNT);
 
-    // Multi-chromatic Colorful Neural Palettes
-    const colorCyan = new THREE.Color('#00f5d4');    // Frontal (logic & focus)
-    const colorMagenta = new THREE.Color('#f72585'); // Parietal / Limbic (emotion)
-    const colorPurple = new THREE.Color('#7209b7');  // Cortex
-    const colorGold = new THREE.Color('#ffb703');    // Temporal (memory)
-    const colorEmerald = new THREE.Color('#10b981'); // Cerebellum (balance)
-    const colorBlue = new THREE.Color('#4361ee');
+    // Multi-chromatic Colorful Neural Palettes (Sapphire Blue, Amethyst, Rose Coral, Solar Gold, Royal Indigo)
+    const colorSapphire = new THREE.Color('#3b82f6');  // Frontal (logic & focus)
+    const colorRose = new THREE.Color('#f43f5e');      // Occipital / Limbic (emotion)
+    const colorAmethyst = new THREE.Color('#8b5cf6');  // Parietal Cortex
+    const colorGold = new THREE.Color('#f59e0b');      // Temporal (memory)
+    const colorIndigo = new THREE.Color('#6366f1');    // Cerebellum (balance)
+    const colorIce = new THREE.Color('#60a5fa');
 
     let pIdx = 0;
     while (pIdx < BRAIN_PARTICLE_COUNT) {
@@ -146,20 +146,20 @@ export default function BrainHologram3D({
       // Colorful Functional Lobe Mapping
       const pColor = new THREE.Color();
       if (y < -20 && z < -20) {
-        // Cerebellum: Emerald to Cyan
-        pColor.lerpColors(colorEmerald, colorCyan, Math.random());
+        // Cerebellum: Royal Indigo to Ice Blue
+        pColor.lerpColors(colorIndigo, colorIce, Math.random());
       } else if (z > 25) {
-        // Frontal Lobe: Vibrant Cyan & Electric Blue
-        pColor.lerpColors(colorCyan, colorBlue, Math.random());
+        // Frontal Lobe: Sapphire Blue & Ice Blue
+        pColor.lerpColors(colorSapphire, colorIce, Math.random());
       } else if (z < -20) {
-        // Occipital Lobe: Sunset Magenta & Pink
-        pColor.lerpColors(colorMagenta, colorPurple, Math.random());
+        // Occipital Lobe: Sunset Rose & Amethyst
+        pColor.lerpColors(colorRose, colorAmethyst, Math.random());
       } else if (y < 0 && Math.abs(x) > 28) {
-        // Temporal Lobe: Solar Gold & Amber
-        pColor.lerpColors(colorGold, colorMagenta, Math.random());
+        // Temporal Lobe: Solar Gold & Rose
+        pColor.lerpColors(colorGold, colorRose, Math.random());
       } else {
-        // Parietal Cortex & Central Sulcus: Neon Violet & Lavender
-        pColor.lerpColors(colorPurple, colorMagenta, Math.random());
+        // Parietal Cortex: Amethyst Violet & Sapphire Blue
+        pColor.lerpColors(colorAmethyst, colorSapphire, Math.random());
       }
 
       colors[i3] = pColor.r;
@@ -180,8 +180,8 @@ export default function BrainHologram3D({
     const dotCtx = dotCanvas.getContext('2d');
     const grad = dotCtx.createRadialGradient(16, 16, 0, 16, 16, 16);
     grad.addColorStop(0, 'rgba(255, 255, 255, 1)');
-    grad.addColorStop(0.3, 'rgba(0, 245, 212, 0.9)');
-    grad.addColorStop(0.7, 'rgba(181, 23, 158, 0.4)');
+    grad.addColorStop(0.3, 'rgba(59, 130, 246, 0.95)');
+    grad.addColorStop(0.7, 'rgba(139, 92, 246, 0.4)');
     grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
     dotCtx.fillStyle = grad;
     dotCtx.fillRect(0, 0, 32, 32);
@@ -257,10 +257,10 @@ export default function BrainHologram3D({
     // 5. Corpus Callosum & Inner Limbic Core Orb
     const coreGeo = new THREE.SphereGeometry(14, 16, 16);
     const coreMat = new THREE.MeshBasicMaterial({
-      color: 0x00f5d4,
+      color: 0x8b5cf6,
       wireframe: true,
       transparent: true,
-      opacity: 0.35
+      opacity: 0.4
     });
     const coreMesh = new THREE.Mesh(coreGeo, coreMat);
     coreMesh.position.set(0, -2, -5);
@@ -269,9 +269,9 @@ export default function BrainHologram3D({
     // 6. Holographic Orbital Quantum Rings
     const ring1Geo = new THREE.TorusGeometry(85, 1.0, 16, 100);
     const ring1Mat = new THREE.MeshBasicMaterial({
-      color: 0x00f5d4,
+      color: 0x3b82f6,
       transparent: true,
-      opacity: 0.45
+      opacity: 0.5
     });
     const ring1 = new THREE.Mesh(ring1Geo, ring1Mat);
     ring1.rotation.x = Math.PI / 4;
@@ -279,9 +279,9 @@ export default function BrainHologram3D({
 
     const ring2Geo = new THREE.TorusGeometry(100, 0.9, 16, 100);
     const ring2Mat = new THREE.MeshBasicMaterial({
-      color: 0xf72585,
+      color: 0xec4899,
       transparent: true,
-      opacity: 0.38
+      opacity: 0.45
     });
     const ring2 = new THREE.Mesh(ring2Geo, ring2Mat);
     ring2.rotation.y = Math.PI / 3;

@@ -260,7 +260,7 @@ export default function FocusMode({ examProfile, onTimerComplete, onTriggerAlert
       <div className="glass-panel">
         <div className="flex-between">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Timer className="text-teal" size={20} />
+            <Timer className="text-rose" size={20} />
             <h4 style={{ margin: 0 }}>Study Focus Timer</h4>
           </div>
           <div style={{ display: 'flex', gap: '0.25rem', background: 'rgba(255,255,255,0.03)', borderRadius: 'var(--border-radius-sm)', padding: '2px' }}>
@@ -292,7 +292,7 @@ export default function FocusMode({ examProfile, onTimerComplete, onTriggerAlert
         <div className="flex-center" style={{ gap: '0.75rem', marginBottom: '1.5rem' }}>
           <button 
             onClick={startPauseTimer} 
-            className="btn btn-teal" 
+            className="btn btn-rose" 
             style={{ padding: '0.6rem 1.2rem', flex: 1 }}
             aria-pressed={isActive}
             aria-label={isActive ? "Pause focus timer" : "Start focus timer"}

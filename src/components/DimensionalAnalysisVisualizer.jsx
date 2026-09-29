@@ -69,8 +69,8 @@ export default function DimensionalAnalysisVisualizer({
     const ctx = canvas.getContext('2d');
     const grad = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
     grad.addColorStop(0, 'rgba(255, 255, 255, 1)');
-    grad.addColorStop(0.3, 'rgba(20, 184, 166, 0.85)');
-    grad.addColorStop(0.7, 'rgba(139, 92, 246, 0.3)');
+    grad.addColorStop(0.3, 'rgba(168, 85, 247, 0.85)');
+    grad.addColorStop(0.7, 'rgba(244, 63, 94, 0.35)');
     grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, 32, 32);
@@ -85,8 +85,8 @@ export default function DimensionalAnalysisVisualizer({
     const frequencies = new Float32Array(PARTICLE_COUNT);
 
     const moodScore = analysisResult?.mood_score ?? 60;
-    let baseColorA = new THREE.Color(moodScore >= 70 ? '#14b8a6' : moodScore >= 45 ? '#f59e0b' : '#ef4444');
-    let baseColorB = new THREE.Color(moodScore >= 70 ? '#06b6d4' : moodScore >= 45 ? '#8b5cf6' : '#ec4899');
+    let baseColorA = new THREE.Color(moodScore >= 70 ? '#6366f1' : moodScore >= 45 ? '#f59e0b' : '#f43f5e');
+    let baseColorB = new THREE.Color(moodScore >= 70 ? '#a855f7' : moodScore >= 45 ? '#8b5cf6' : '#ec4899');
 
     // Distribute particles in 3D Torus Knot
     const p = 2;
@@ -251,11 +251,11 @@ export default function DimensionalAnalysisVisualizer({
         position: 'relative',
         overflow: 'hidden',
         padding: compact ? '0.75rem' : '1.25rem',
-        border: isAnalyzing ? '1px solid var(--accent-teal)' : '1px solid rgba(255, 255, 255, 0.1)',
-        background: 'linear-gradient(145deg, rgba(19, 26, 48, 0.85) 0%, rgba(10, 15, 29, 0.95) 100%)',
+        border: isAnalyzing ? '1px solid var(--accent-rose)' : '1px solid rgba(168, 85, 247, 0.25)',
+        background: 'linear-gradient(145deg, rgba(16, 12, 32, 0.85) 0%, rgba(8, 7, 16, 0.95) 100%)',
         boxShadow: isAnalyzing 
-          ? '0 0 30px rgba(20, 184, 166, 0.25), inset 0 0 20px rgba(20, 184, 166, 0.1)' 
-          : '0 8px 32px rgba(0, 0, 0, 0.35)',
+          ? '0 0 30px rgba(244, 63, 94, 0.25), inset 0 0 20px rgba(124, 58, 237, 0.15)' 
+          : '0 8px 32px rgba(0, 0, 0, 0.5)',
         transition: 'all 0.4s ease'
       }}
       aria-label="3D Dimensional Analysis Engine"
@@ -263,7 +263,7 @@ export default function DimensionalAnalysisVisualizer({
       {/* Header bar */}
       <div className="flex-between" style={{ alignItems: 'center', marginBottom: '0.5rem', position: 'relative', zIndex: 2 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <BrainCircuit size={18} className={isAnalyzing ? 'text-teal animate-spin' : 'text-violet'} />
+          <BrainCircuit size={18} className={isAnalyzing ? 'text-rose animate-spin' : 'text-violet'} />
           <span style={{ fontSize: '0.85rem', fontWeight: 700, fontFamily: 'var(--font-title)', letterSpacing: '0.02em' }}>
             {isAnalyzing ? 'Dimensional Particle Analyzer' : 'Quantum Emotion Matrix (3D)'}
           </span>
@@ -273,9 +273,9 @@ export default function DimensionalAnalysisVisualizer({
           style={{
             fontSize: '0.68rem',
             padding: '0.2rem 0.6rem',
-            background: isAnalyzing ? 'rgba(20, 184, 166, 0.2)' : 'rgba(139, 92, 246, 0.2)',
-            color: isAnalyzing ? 'var(--accent-teal)' : '#a78bfa',
-            border: isAnalyzing ? '1px solid var(--accent-teal)' : '1px solid rgba(139, 92, 246, 0.4)'
+            background: isAnalyzing ? 'rgba(244, 63, 94, 0.2)' : 'rgba(139, 92, 246, 0.2)',
+            color: isAnalyzing ? 'var(--accent-rose)' : '#a78bfa',
+            border: isAnalyzing ? '1px solid var(--accent-rose)' : '1px solid rgba(139, 92, 246, 0.4)'
           }}
         >
           {isAnalyzing ? 'Processing 3D Vectors...' : analysisResult ? `Aura Score: ${analysisResult.mood_score}/100` : 'Interactive 3D'}
@@ -303,11 +303,11 @@ export default function DimensionalAnalysisVisualizer({
             bottom: '1rem',
             left: '1rem',
             right: '1rem',
-            background: 'rgba(10, 15, 29, 0.85)',
+            background: 'rgba(8, 7, 16, 0.9)',
             backdropFilter: 'blur(10px)',
             borderRadius: '8px',
             padding: '0.6rem 0.85rem',
-            border: '1px solid rgba(20, 184, 166, 0.3)',
+            border: '1px solid rgba(244, 63, 94, 0.3)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -321,8 +321,8 @@ export default function DimensionalAnalysisVisualizer({
                 width: '6px',
                 height: '6px',
                 borderRadius: '50%',
-                backgroundColor: 'var(--accent-teal)',
-                boxShadow: '0 0 6px var(--accent-teal)',
+                backgroundColor: 'var(--accent-rose)',
+                boxShadow: '0 0 6px var(--accent-rose)',
                 animation: 'pulse-glow 1s infinite'
               }}
             />
@@ -330,7 +330,7 @@ export default function DimensionalAnalysisVisualizer({
               {telemetryMessages[telemetryStep]}
             </span>
           </div>
-          <span style={{ fontSize: '0.72rem', color: 'var(--accent-teal)', fontWeight: 600 }}>
+          <span style={{ fontSize: '0.72rem', color: 'var(--accent-rose)', fontWeight: 600 }}>
             AI Sentiment Analysis
           </span>
         </div>

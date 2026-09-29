@@ -11,27 +11,37 @@ export default function AuraLive({ examProfile, onTriggerConfirm }) {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [captions, setCaptions] = useState([]);
+  const [liveInterim, setLiveInterim] = useState('');
+  const [isPausing, setIsPausing] = useState(false);
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const recognitionRef = useRef(null);
   const synthesisUtteranceRef = useRef(null);
   const transcriptsEndRef = useRef(null);
+  const speechBufferRef = useRef('');
+  const silenceTimerRef = useRef(null);
+  const pauseIndicatorTimerRef = useRef(null);
+
+  // 2.5 seconds pause grace period so the student can breathe, hesitate, and finish naturally
+  const SILENCE_PAUSE_DELAY = 2500;
 
   // Auto-scroll transcripts
   useEffect(() => {
     transcriptsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [captions]);
+  }, [captions, liveInterim]);
 
   // Clean up all resources when tab is closed
   useEffect(() => {
     return () => {
       stopCamera();
       stopVoiceEngine();
+      if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+      if (pauseIndicatorTimerRef.current) clearTimeout(pauseIndicatorTimerRef.current);
     };
   }, []);
 
-  // Web Speech API: Speech Recognition Setup
+  // Web Speech API: Continuous Speech Recognition with Silence Buffer & Pause Tolerance
   const initSpeechRecognition = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -40,49 +50,90 @@ export default function AuraLive({ examProfile, onTriggerConfirm }) {
     }
 
     const rec = new SpeechRecognition();
-    rec.continuous = false;
-    rec.interimResults = false;
+    rec.continuous = true;
+    rec.interimResults = true;
     rec.lang = 'en-US';
 
     rec.onstart = () => {
       setIsListening(true);
+      setIsPausing(false);
     };
 
-    rec.onresult = async (event) => {
-      const speechText = event.results[0][0].transcript;
-      if (!speechText.trim()) return;
+    rec.onresult = (event) => {
+      let interimStr = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcriptChunk = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          speechBufferRef.current += (speechBufferRef.current ? ' ' : '') + transcriptChunk;
+        } else {
+          interimStr += transcriptChunk;
+        }
+      }
 
-      // Add user speech to captions list
-      const userCap = {
-        id: Date.now(),
-        sender: 'Student',
-        text: speechText,
-        role: 'user'
-      };
-      setCaptions(prev => [...prev, userCap]);
+      const fullAccumulated = (speechBufferRef.current + ' ' + interimStr).trim();
+      if (fullAccumulated) {
+        setLiveInterim(fullAccumulated);
+        setIsPausing(false);
 
-      // Stop listening while we call backend and speak
-      rec.stop();
-      setIsListening(false);
+        // Reset existing silence timer
+        if (silenceTimerRef.current) {
+          clearTimeout(silenceTimerRef.current);
+        }
+        if (pauseIndicatorTimerRef.current) {
+          clearTimeout(pauseIndicatorTimerRef.current);
+        }
 
-      await handleAuraQuery(speechText);
+        // Visual cue after 1s of pause so the student knows Aura is waiting for them
+        pauseIndicatorTimerRef.current = setTimeout(() => {
+          setIsPausing(true);
+        }, 1100);
+
+        // Commit query after 2.5s of sustained pause
+        silenceTimerRef.current = setTimeout(async () => {
+          const finalQuery = (speechBufferRef.current + ' ' + interimStr).trim();
+          if (finalQuery) {
+            speechBufferRef.current = '';
+            setLiveInterim('');
+            setIsPausing(false);
+
+            try {
+              rec.stop();
+            } catch (err) {}
+            setIsListening(false);
+
+            const userCap = {
+              id: Date.now(),
+              sender: 'Student',
+              text: finalQuery,
+              role: 'user'
+            };
+            setCaptions(prev => [...prev, userCap]);
+
+            await handleAuraQuery(finalQuery);
+          }
+        }, SILENCE_PAUSE_DELAY);
+      }
     };
 
     rec.onerror = (e) => {
-      console.error("Speech recognition error:", e);
-      if (e.error !== 'no-speech') {
+      // Tolerate 'no-speech' gracefully if user starts late
+      if (e.error === 'no-speech') {
+        return;
+      }
+      console.warn("Speech recognition notice:", e.error);
+      if (e.error !== 'aborted') {
         setIsListening(false);
       }
     };
 
     rec.onend = () => {
       setIsListening(false);
-      // If session is still active and we're not speaking/loading, restart listening
+      // If user hasn't finished speaking, session is active, and we're not speaking/loading, keep listening seamlessly
       if (isActive && !isSpeaking && !isLoading) {
         try {
           rec.start();
         } catch (err) {
-          // Ignore if already started
+          // Ignore if already active
         }
       }
     };
@@ -97,8 +148,9 @@ export default function AuraLive({ examProfile, onTriggerConfirm }) {
       const journalLogs = storage.getJournalLogs();
       const recentTriggers = journalLogs.length > 0 ? journalLogs[0].analysis.triggers : [];
       const currentStress = journalLogs.length > 0 ? journalLogs[0].stress_input : 50;
+      const activeUser = storage.getActiveUsername();
 
-      // Use the existing chat messages list for full history, or just seed a brief history
+      // Use the existing chat messages list for full history
       const history = storage.getChatMessages();
       const newMessages = [...history, { role: 'user', content: queryText }];
 
@@ -107,6 +159,7 @@ export default function AuraLive({ examProfile, onTriggerConfirm }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: newMessages.map(m => ({ role: m.role, content: m.content })),
+          username: activeUser || undefined,
           student_context: {
             exam: examProfile?.exam || 'Competitive Exam',
             current_stress: currentStress,
@@ -336,7 +389,7 @@ export default function AuraLive({ examProfile, onTriggerConfirm }) {
             {isListening && (
               <>
                 <div className="pulse-indicator"></div>
-                <span>Listening to you...</span>
+                <span>{isPausing ? "Waiting for you to finish..." : "Listening to you..."}</span>
               </>
             )}
             {isSpeaking && (
@@ -349,7 +402,7 @@ export default function AuraLive({ examProfile, onTriggerConfirm }) {
             {isLoading && (
               <>
                 <div className="spinner" style={{ width: '12px', height: '12px' }}></div>
-                <span>Aura is thinking...</span>
+                <span>Aura is answering...</span>
               </>
             )}
           </div>
@@ -358,7 +411,7 @@ export default function AuraLive({ examProfile, onTriggerConfirm }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', width: '100%', marginTop: '0.5rem' }}>
           <button
             onClick={toggleSession}
-            className={`btn ${isActive ? 'btn-danger' : 'btn-teal'}`}
+            className={`btn ${isActive ? 'btn-danger' : 'btn-rose'}`}
             style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
             aria-pressed={isActive}
             aria-label={isActive ? "Close Live Counseling Session" : "Start Live Voice & Video Session"}
@@ -377,7 +430,7 @@ export default function AuraLive({ examProfile, onTriggerConfirm }) {
           {isActive && (
             <button 
               onClick={handleManualMicToggle} 
-              className={`btn ${isListening ? 'btn-teal' : 'btn-secondary'}`}
+              className={`btn ${isListening ? 'btn-rose' : 'btn-secondary'}`}
               style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
               disabled={isSpeaking || isLoading}
               aria-pressed={isListening}
@@ -385,7 +438,7 @@ export default function AuraLive({ examProfile, onTriggerConfirm }) {
             >
               {isListening ? (
                 <>
-                  <Mic size={16} /> Listening...
+                  <Mic size={16} /> {isPausing ? "Listening (Paused)..." : "Listening..."}
                 </>
               ) : (
                 <>
@@ -401,10 +454,10 @@ export default function AuraLive({ examProfile, onTriggerConfirm }) {
       <div className="glass-panel live-captions-panel">
         <div className="flex-between" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.75rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Sparkles className="text-teal" size={20} />
+            <Sparkles className="text-rose" size={20} />
             <h4 style={{ margin: 0 }}>Interactive Live Transcripts</h4>
           </div>
-          <span className="badge badge-teal" style={{ fontSize: '0.75rem' }}>Aura Speak Enabled</span>
+          <span className="badge badge-rose" style={{ fontSize: '0.75rem' }}>Aura Voice Guarded</span>
         </div>
 
         {!isSpeechSupported && (
@@ -417,9 +470,9 @@ export default function AuraLive({ examProfile, onTriggerConfirm }) {
         )}
 
         <div className="live-transcripts">
-          {captions.length === 0 ? (
+          {captions.length === 0 && !liveInterim ? (
             <p className="text-muted" style={{ fontSize: '0.85rem', textAlign: 'center', margin: 'auto 0', padding: '1rem', lineHeight: '1.5' }}>
-              A live transcript of your spoken session will populate here. Click <strong>Start Live Session</strong> above and authorize your camera and microphone options to interact with Aura verbally.
+              A live transcript of your spoken session will populate here. Click <strong>Start Live Session</strong> above and speak naturally at your own pace—Aura will wait for you to finish.
             </p>
           ) : (
             captions.map((cap) => (
@@ -429,6 +482,25 @@ export default function AuraLive({ examProfile, onTriggerConfirm }) {
               </div>
             ))
           )}
+
+          {/* Real-time speaking buffer with pause indicator */}
+          {liveInterim && (
+            <div className="caption-wrapper user" style={{ opacity: 0.9 }}>
+              <span className="caption-sender" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <span className="pulse-indicator" style={{ width: '8px', height: '8px' }}></span>
+                {isPausing ? "Aura waiting for you to finish..." : "Speaking..."}
+              </span>
+              <div className="caption-bubble" style={{ borderStyle: 'dashed', borderColor: 'rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.08)' }}>
+                {liveInterim}
+                {isPausing && (
+                  <span style={{ display: 'block', fontSize: '0.75rem', color: '#93c5fd', marginTop: '0.35rem' }}>
+                    ⏳ Paused... Aura giving you time to breathe and finish your thought.
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
           {isLoading && (
             <div className="caption-wrapper model">
               <span className="caption-sender">Aura</span>

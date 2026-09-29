@@ -58,6 +58,7 @@ export default function ChatCompanion({ examProfile, onTriggerConfirm }) {
         },
         body: JSON.stringify({
           messages: newMessages.map(m => ({ role: m.role, content: m.content })),
+          username: storage.getActiveUsername() || undefined,
           student_context: {
             exam: examProfile?.exam || 'Competitive Exam',
             current_stress: currentStress,
@@ -133,7 +134,7 @@ export default function ChatCompanion({ examProfile, onTriggerConfirm }) {
         </div>
         <div style={{ flex: 1 }}>
           <h4 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-            Aura <Sparkles size={14} className="text-teal" />
+            Aura <Sparkles size={14} className="text-rose" />
           </h4>
           <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
             Empathetic Exam Wellness Companion
@@ -205,7 +206,7 @@ export default function ChatCompanion({ examProfile, onTriggerConfirm }) {
         />
         <button 
           onClick={() => handleSendMessage()} 
-          className="btn btn-teal" 
+          className="btn btn-rose" 
           style={{ padding: '0.75rem' }}
           disabled={isLoading || !inputText.trim()}
           aria-label="Send message to Aura"

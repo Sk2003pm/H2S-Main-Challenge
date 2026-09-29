@@ -212,5 +212,89 @@ class TestMindAlignAPI(unittest.TestCase):
         self.assertEqual(response.status_code, 422)
 
 
+    # ------------------------------------------------------------------ #
+    #  SQLite Database & Guardrails Status Tests                         #
+    # ------------------------------------------------------------------ #
+
+    def test_database_status(self):
+        """GET /api/db/status should return valid SQLite stats."""
+        response = self.client.get("/api/db/status")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["status"], "connected")
+        self.assertIn("users_count", data)
+        self.assertIn("journals_count", data)
+
+    def test_guardrails_status(self):
+        """GET /api/guardrails/status should return active safety tiers and helplines."""
+        response = self.client.get("/api/guardrails/status")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["status"], "active")
+        self.assertIn("verified_helplines", data)
+        self.assertIn("tele_manas", data["verified_helplines"])
+        self.assertIn("kiran", data["verified_helplines"])
+
+    def test_sqlite_user_registration_and_login(self):
+        """User registration and login flow via SQLite."""
+        username = f"test_student_{int(__import__('time').time())}"
+        reg_payload = {
+            "username": username,
+            "password_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "name": "Test Student",
+            "exam": "NEET UG",
+            "exam_date": "2026-05-03",
+            "avatar": "🧘"
+        }
+        reg_res = self.client.post("/api/auth/register", json=reg_payload)
+        self.assertEqual(reg_res.status_code, 200)
+
+        # Login
+        login_res = self.client.post("/api/auth/login", json={
+            "username": username,
+            "password_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        })
+        self.assertEqual(login_res.status_code, 200)
+        self.assertTrue(login_res.json()["success"])
+
+    def test_sqlite_journal_crud(self):
+        """Save and fetch journal entry from SQLite."""
+        username = "journal_tester"
+        journal_id = f"j_{int(__import__('time').time())}"
+        payload = {
+            "id": journal_id,
+            "username": username,
+            "date": "2026-09-29T22:00:00.000Z",
+            "text": "Struggling with organic reaction mechanisms today.",
+            "stress_input": 65,
+            "analysis": {"mood_score": 35, "triggers": ["Organic Chemistry"]}
+        }
+        save_res = self.client.post("/api/journals", json=payload)
+        self.assertEqual(save_res.status_code, 200)
+
+        # Fetch
+        get_res = self.client.get(f"/api/journals?username={username}")
+        self.assertEqual(get_res.status_code, 200)
+        journals = get_res.json()
+        self.assertIsInstance(journals, list)
+        self.assertTrue(any(j["id"] == journal_id for j in journals))
+
+    def test_aura_memory_crud(self):
+        """Save and fetch long-term memories in SQLite."""
+        username = "memory_tester"
+        add_res = self.client.post("/api/chat/memories", json={
+            "username": username,
+            "category": "coping_preference",
+            "memory_text": "Prefers 4-7-8 breathing over meditation"
+        })
+        self.assertEqual(add_res.status_code, 200)
+
+        get_res = self.client.get(f"/api/chat/memories?username={username}")
+        self.assertEqual(get_res.status_code, 200)
+        memories = get_res.json()
+        self.assertTrue(any(m["category"] == "coping_preference" for m in memories))
+
+
 if __name__ == "__main__":
     unittest.main()
+

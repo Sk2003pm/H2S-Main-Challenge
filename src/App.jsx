@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import { 
-  Heart, 
-  LayoutDashboard, 
-  BookOpen, 
-  MessageSquare, 
-  Wind, 
-  LogOut, 
-  Activity, 
-  Sparkles, 
+import {
+  Heart,
+  LayoutDashboard,
+  BookOpen,
+  MessageSquare,
+  Wind,
+  LogOut,
+  Activity,
+  Sparkles,
   Award,
   Calendar,
   Lock,
@@ -35,10 +35,10 @@ export default function App() {
   const [profile, setProfile] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isGlobalAnalyzing, setIsGlobalAnalyzing] = useState(false);
-  
+
   // Auth view switcher
   const [authMode, setAuthMode] = useState('login');
-  
+
   // Auth Form Inputs
   const [usernameInput, setUsernameInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
@@ -46,7 +46,7 @@ export default function App() {
   const [setupExam, setSetupExam] = useState('JEE Main & Advanced');
   const [setupDate, setSetupDate] = useState('');
   const [setupAvatar, setSetupAvatar] = useState('🧘');
-  
+
   // Custom Modal Overlay State
   const [modal, setModal] = useState({
     isOpen: false,
@@ -83,12 +83,12 @@ export default function App() {
 
   const avatars = ['🧘', '🧠', '🎯', '🚀', '📚', '🍀', '☀️', '🌈'];
   const exams = [
-    'JEE Main & Advanced', 
-    'NEET UG', 
-    'UPSC CSE', 
-    'GATE', 
-    'CAT (IIM)', 
-    'CUET', 
+    'JEE Main & Advanced',
+    'NEET UG',
+    'UPSC CSE',
+    'GATE',
+    'CAT (IIM)',
+    'CUET',
     'CBSE / ICSE Board Exams'
   ];
 
@@ -115,7 +115,7 @@ export default function App() {
     try {
       const storedXp = localStorage.getItem(`mindalign_xp_${username}`) || '0';
       const storedLvl = localStorage.getItem(`mindalign_lvl_${username}`) || '1';
-      
+
       setXp(Number(storedXp));
       setLevel(Number(storedLvl));
       setLevelTitle(getLevelName(Number(storedLvl)));
@@ -162,7 +162,7 @@ export default function App() {
         setQuizCompleted(true);
         const ans = localStorage.getItem(`mindalign_quiz_ans_${profile.username}`);
         if (ans !== null) setSelectedAnswerIdx(Number(ans));
-        
+
         const savedQ = localStorage.getItem(`mindalign_quiz_q_${profile.username}`);
         if (savedQ) {
           setQuizQuestion(JSON.parse(savedQ));
@@ -225,16 +225,16 @@ export default function App() {
   const rewardXp = (amount, taskName) => {
     if (!profile) return;
     const username = profile.username;
-    
+
     setXp((prevXp) => {
       let newXp = prevXp + amount;
       let currentLvl = level;
       const xpNeeded = currentLvl * 100;
-      
+
       if (newXp >= xpNeeded) {
         newXp = newXp - xpNeeded;
         currentLvl += 1;
-        
+
         localStorage.setItem(`mindalign_lvl_${username}`, String(currentLvl));
         setLevel(currentLvl);
         setLevelTitle(getLevelName(currentLvl));
@@ -244,7 +244,7 @@ export default function App() {
           spread: 100,
           origin: { y: 0.5 }
         });
-        
+
         triggerAlert(
           "🌟 MINDSET LEVEL UP!",
           `Amazing work! By practicing ${taskName}, you have ascended to Level ${currentLvl} (${getLevelName(currentLvl)})! Keep maintaining your emotional equilibrium.`
@@ -259,7 +259,7 @@ export default function App() {
   const calculateStats = () => {
     const logs = storage.getJournalLogs();
     const completedBreaths = localStorage.getItem(`mindalign_breath_cycles_${profile?.username}`) || 0;
-    
+
     if (logs.length > 0) {
       const totalStress = logs.reduce((acc, curr) => acc + curr.stress_input, 0);
       setStats({
@@ -381,7 +381,7 @@ export default function App() {
     if (!profile) return;
     const stressMap = { 1: 90, 2: 70, 3: 50, 4: 30, 5: 15 };
     const simulatedStress = stressMap[currentQuickMood];
-    
+
     const responses = {
       1: "I am feeling extremely overwhelmed and having trouble focusing today.",
       2: "Exam stress is building up, mock results are worrying, and revision is behind.",
@@ -422,10 +422,10 @@ export default function App() {
   // Quiz Answer selection
   const handleSelectQuizAnswer = (ansIdx) => {
     if (quizCompleted || !quizQuestion) return;
-    
+
     setSelectedAnswerIdx(ansIdx);
     setQuizCompleted(true);
-    
+
     const isCorrect = quizQuestion.correct_idx === ansIdx;
 
     localStorage.setItem(`mindalign_quiz_done_${profile.username}`, 'true');
@@ -448,7 +448,7 @@ export default function App() {
   // Render Next-Level 3D Three.js Interactive Authentication Portal if user is not authenticated
   if (!profile) {
     return (
-      <div className="setup-wrapper" style={{ position: 'relative', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div className="setup-wrapper" style={{ position: 'relative', height: '100vh', maxHeight: '100vh', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <ThreeDimensionalParticles isAnalyzing={false} stressLevel={50} activeMode="nebula" />
         <ThreeDimensionalAuthPortal
           authMode={authMode}
@@ -479,20 +479,20 @@ export default function App() {
   // Authenticated Dashboard Layout with Interactive 3D Background
   return (
     <div className="app-container" style={{ position: 'relative' }}>
-      <ThreeDimensionalParticles 
-        isAnalyzing={isGlobalAnalyzing} 
-        stressLevel={stats.avgStress || 50} 
+      <ThreeDimensionalParticles
+        isAnalyzing={isGlobalAnalyzing}
+        stressLevel={stats.avgStress || 50}
         activeMode={stats.avgStress > 70 ? 'quantum' : 'nebula'}
       />
       {/* Sidebar Navigation */}
       <nav className="navbar">
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0 1rem' }} className="nav-logo">
-          <Heart size={20} className="text-teal" />
+          <Heart size={20} className="text-rose" />
           <span style={{ fontWeight: '800', fontFamily: 'var(--font-title)', fontSize: '1rem' }} className="text-gradient">MindAlign</span>
         </div>
-        
-        <button 
-          className={`nav-link ${activeTab === 'dashboard' ? 'active' : ''}`} 
+
+        <button
+          className={`nav-link ${activeTab === 'dashboard' ? 'active' : ''}`}
           onClick={() => setActiveTab('dashboard')}
           aria-current={activeTab === 'dashboard' ? 'page' : undefined}
         >
@@ -500,8 +500,8 @@ export default function App() {
           <span>Dashboard</span>
         </button>
 
-        <button 
-          className={`nav-link ${activeTab === 'journal' ? 'active' : ''}`} 
+        <button
+          className={`nav-link ${activeTab === 'journal' ? 'active' : ''}`}
           onClick={() => setActiveTab('journal')}
           aria-current={activeTab === 'journal' ? 'page' : undefined}
         >
@@ -509,8 +509,8 @@ export default function App() {
           <span>Journal</span>
         </button>
 
-        <button 
-          className={`nav-link ${activeTab === 'chat' ? 'active' : ''}`} 
+        <button
+          className={`nav-link ${activeTab === 'chat' ? 'active' : ''}`}
           onClick={() => setActiveTab('chat')}
           aria-current={activeTab === 'chat' ? 'page' : undefined}
         >
@@ -518,8 +518,8 @@ export default function App() {
           <span>Aura Chat</span>
         </button>
 
-        <button 
-          className={`nav-link ${activeTab === 'aura-live' ? 'active' : ''}`} 
+        <button
+          className={`nav-link ${activeTab === 'aura-live' ? 'active' : ''}`}
           onClick={() => setActiveTab('aura-live')}
           aria-current={activeTab === 'aura-live' ? 'page' : undefined}
         >
@@ -527,8 +527,8 @@ export default function App() {
           <span>Aura Live</span>
         </button>
 
-        <button 
-          className={`nav-link ${activeTab === 'breathing' ? 'active' : ''}`} 
+        <button
+          className={`nav-link ${activeTab === 'breathing' ? 'active' : ''}`}
           onClick={() => setActiveTab('breathing')}
           aria-current={activeTab === 'breathing' ? 'page' : undefined}
         >
@@ -536,8 +536,8 @@ export default function App() {
           <span>Breathing</span>
         </button>
 
-        <button 
-          className={`nav-link ${activeTab === 'stress-buster' ? 'active' : ''}`} 
+        <button
+          className={`nav-link ${activeTab === 'stress-buster' ? 'active' : ''}`}
           onClick={() => setActiveTab('stress-buster')}
           aria-current={activeTab === 'stress-buster' ? 'page' : undefined}
         >
@@ -546,8 +546,8 @@ export default function App() {
         </button>
 
         <div className="nav-footer">
-          <button 
-            className="nav-link" 
+          <button
+            className="nav-link"
             onClick={handleSignOut}
             style={{ opacity: 0.8 }}
             title="Sign Out"
@@ -555,8 +555,8 @@ export default function App() {
             <LogOut size={20} />
             <span>Sign Out</span>
           </button>
-          <button 
-            className="nav-link" 
+          <button
+            className="nav-link"
             onClick={handleWipeAll}
             style={{ opacity: 0.5, fontSize: '0.65rem' }}
             title="Clear all local databases"
@@ -577,7 +577,7 @@ export default function App() {
             </span>
           </div>
         </div>
-        
+
         {/* Gamified progress bar */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <div className="xp-container" title={`${xp} / ${level * 100} XP for next level`}>
@@ -596,8 +596,8 @@ export default function App() {
             User: <strong>@{profile.username}</strong>
           </span>
           <div className="header-actions">
-            <button 
-              className="btn btn-secondary" 
+            <button
+              className="btn btn-secondary"
               onClick={handleSignOut}
               style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
               title="Sign Out"
@@ -612,9 +612,9 @@ export default function App() {
       {/* Content Tabs */}
       {activeTab === 'dashboard' && (
         <div className="dashboard-grid" style={{ animation: 'slide-up var(--transition-normal) ease' }}>
-          
+
           <div className="db-col-8" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            
+
             {/* AI-Generated Dynamic Study/Relaxation Tips */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <div className="glass-panel" style={{ borderLeft: '4px solid var(--accent-violet)', display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
@@ -625,8 +625,8 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="glass-panel" style={{ borderLeft: '4px solid var(--accent-teal)', display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-                <Sparkles className="text-teal" size={24} style={{ flexShrink: 0 }} />
+              <div className="glass-panel" style={{ borderLeft: '4px solid var(--accent-rose)', display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                <Sparkles className="text-rose" size={24} style={{ flexShrink: 0 }} />
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                   <span style={{ fontSize: '0.8rem', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>AI Stress-Reliever</span>
                   <p style={{ fontSize: '0.85rem', lineHeight: '1.4', color: 'var(--text-secondary)' }}>{dailyTips.relaxation_tip}</p>
@@ -666,7 +666,7 @@ export default function App() {
                 <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                   <div className="flex-between">
                     <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0, fontSize: '0.95rem' }}>
-                      <Activity className="text-teal" size={18} /> Wellness Mood Trend
+                      <Activity className="text-rose" size={18} /> Wellness Mood Trend
                     </h3>
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Last {logs.length} entries</span>
                   </div>
@@ -678,7 +678,7 @@ export default function App() {
                     {logs.map((log, i) => {
                       const score = log.analysis?.mood_score ?? 50;
                       const barH = Math.max(6, Math.round((score / maxScore) * CHART_H));
-                      const color = score >= 65 ? 'var(--accent-teal)' : score >= 40 ? 'var(--warning)' : 'var(--danger)';
+                      const color = score >= 65 ? 'var(--accent-rose)' : score >= 40 ? 'var(--warning)' : 'var(--danger)';
                       return (
                         <div
                           key={log.id ?? i}
@@ -699,7 +699,7 @@ export default function App() {
                   </div>
                   <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
                     <span style={{ fontSize: '0.65rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--accent-teal)', display: 'inline-block' }} /> Good (65+)
+                      <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--accent-rose)', display: 'inline-block' }} /> Good (65+)
                     </span>
                     <span style={{ fontSize: '0.65rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
                       <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--warning)', display: 'inline-block' }} /> Moderate (40–64)
@@ -716,16 +716,16 @@ export default function App() {
             <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               <div className="flex-between">
                 <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
-                  <Activity className="text-teal" size={22} /> Daily Mood Check-In
+                  <Activity className="text-rose" size={22} /> Daily Mood Check-In
                 </h3>
-                <span className="badge badge-teal" style={{ fontSize: '0.75rem' }}>+15 XP</span>
+                <span className="badge badge-rose" style={{ fontSize: '0.75rem' }}>+15 XP</span>
               </div>
               <p className="text-muted" style={{ fontSize: '0.9rem', lineHeight: '1.4' }}>
                 Select the emoji that matches your preparation mindset right now to plot your stress trends:
               </p>
 
               <div style={{ display: 'flex', justifyContent: 'space-around', margin: '0.5rem 0' }}>
-                <button 
+                <button
                   type="button"
                   onClick={() => setCurrentQuickMood(1)}
                   style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '2.5rem', opacity: currentQuickMood === 1 ? 1 : 0.4, transform: currentQuickMood === 1 ? 'scale(1.2)' : 'none', transition: 'all 0.2s', padding: '0.2rem', borderRadius: '50%' }}
@@ -735,7 +735,7 @@ export default function App() {
                 >
                   😞
                 </button>
-                <button 
+                <button
                   type="button"
                   onClick={() => setCurrentQuickMood(2)}
                   style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '2.5rem', opacity: currentQuickMood === 2 ? 1 : 0.4, transform: currentQuickMood === 2 ? 'scale(1.2)' : 'none', transition: 'all 0.2s', padding: '0.2rem', borderRadius: '50%' }}
@@ -745,7 +745,7 @@ export default function App() {
                 >
                   😐
                 </button>
-                <button 
+                <button
                   type="button"
                   onClick={() => setCurrentQuickMood(3)}
                   style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '2.5rem', opacity: currentQuickMood === 3 ? 1 : 0.4, transform: currentQuickMood === 3 ? 'scale(1.2)' : 'none', transition: 'all 0.2s', padding: '0.2rem', borderRadius: '50%' }}
@@ -755,7 +755,7 @@ export default function App() {
                 >
                   🙂
                 </button>
-                <button 
+                <button
                   type="button"
                   onClick={() => setCurrentQuickMood(4)}
                   style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '2.5rem', opacity: currentQuickMood === 4 ? 1 : 0.4, transform: currentQuickMood === 4 ? 'scale(1.2)' : 'none', transition: 'all 0.2s', padding: '0.2rem', borderRadius: '50%' }}
@@ -765,7 +765,7 @@ export default function App() {
                 >
                   😇
                 </button>
-                <button 
+                <button
                   type="button"
                   onClick={() => setCurrentQuickMood(5)}
                   style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '2.5rem', opacity: currentQuickMood === 5 ? 1 : 0.4, transform: currentQuickMood === 5 ? 'scale(1.2)' : 'none', transition: 'all 0.2s', padding: '0.2rem', borderRadius: '50%' }}
@@ -777,7 +777,7 @@ export default function App() {
                 </button>
               </div>
 
-              <button className="btn btn-teal" onClick={handleQuickCheckinMoodSelection} style={{ alignSelf: 'center', width: '100%', maxWidth: '240px' }}>
+              <button className="btn btn-rose" onClick={handleQuickCheckinMoodSelection} style={{ alignSelf: 'center', width: '100%', maxWidth: '240px' }}>
                 Save My State
               </button>
             </div>
@@ -793,7 +793,7 @@ export default function App() {
               <p className="text-muted" style={{ fontSize: '0.9rem', lineHeight: '1.4' }}>
                 Answer today's active retrieval psychology check-in to build academic resilience and earn wellness points!
               </p>
-              
+
               {isQuizLoading ? (
                 <div className="flex-center" style={{ padding: '2rem', flexDirection: 'column', gap: '0.5rem' }}>
                   <div className="spinner"></div>
@@ -804,7 +804,7 @@ export default function App() {
                   <strong style={{ fontSize: '0.95rem', color: 'var(--text-primary)', display: 'block', marginBottom: '1rem' }}>
                     {quizQuestion.question}
                   </strong>
-                  
+
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                     {quizQuestion.options.map((opt, oIdx) => {
                       const isSelected = selectedAnswerIdx === oIdx;
@@ -833,7 +833,7 @@ export default function App() {
               )}
             </div>
 
-            </div>
+          </div>
 
 
           <div className="db-col-4">
@@ -844,9 +844,9 @@ export default function App() {
 
       {activeTab === 'journal' && (
         <div style={{ animation: 'slide-up var(--transition-normal) ease' }}>
-          <JournalAnalyzer 
-            examProfile={profile} 
-            onAnalysisComplete={handleJournalAnalyzed} 
+          <JournalAnalyzer
+            examProfile={profile}
+            onAnalysisComplete={handleJournalAnalyzed}
             onCopingChecked={() => rewardXp(20, "Coping Task Completed")}
             onAnalyzingChange={setIsGlobalAnalyzing}
           />
@@ -884,7 +884,7 @@ export default function App() {
         <div className="modal-overlay" role="dialog" aria-modal="true" aria-label={modal.title}>
           <div className="modal-card">
             <div className="modal-header">
-              <Sparkles size={18} className="text-teal" />
+              <Sparkles size={18} className="text-rose" />
               <span>{modal.title}</span>
             </div>
             <div className="modal-body">
@@ -893,15 +893,15 @@ export default function App() {
             <div className="modal-actions">
               {modal.isConfirm ? (
                 <>
-                  <button 
-                    className="btn btn-secondary" 
+                  <button
+                    className="btn btn-secondary"
                     style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }}
                     onClick={() => setModal({ ...modal, isOpen: false })}
                   >
                     Cancel
                   </button>
-                  <button 
-                    className="btn btn-teal" 
+                  <button
+                    className="btn btn-rose"
                     style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }}
                     onClick={() => {
                       setModal({ ...modal, isOpen: false });
@@ -912,8 +912,8 @@ export default function App() {
                   </button>
                 </>
               ) : (
-                <button 
-                  className="btn btn-teal" 
+                <button
+                  className="btn btn-rose"
                   style={{ padding: '0.4rem 1.2rem', fontSize: '0.85rem' }}
                   onClick={() => setModal({ ...modal, isOpen: false })}
                 >

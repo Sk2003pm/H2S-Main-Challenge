@@ -217,7 +217,7 @@ export default function JournalAnalyzer({ examProfile, onAnalysisComplete, onCop
 
               <div>
                 <h4 style={{ fontSize: '1.1rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Heart size={16} className="text-teal" /> AI Empathetic Analysis
+                  <Heart size={16} className="text-rose" /> AI Empathetic Analysis
                 </h4>
                 <p style={{ fontSize: '0.95rem', lineHeight: '1.6', color: 'var(--text-primary)' }}>
                   {currentAnalysis.analysis_summary}
@@ -240,7 +240,7 @@ export default function JournalAnalyzer({ examProfile, onAnalysisComplete, onCop
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                   {currentAnalysis.triggers.map((trigger, idx) => (
                     <div key={idx} style={{ fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--accent-teal)' }}></span>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--accent-rose)' }}></span>
                       {trigger}
                     </div>
                   ))}
@@ -283,7 +283,7 @@ export default function JournalAnalyzer({ examProfile, onAnalysisComplete, onCop
       <div className="db-col-4">
         <div className="glass-panel" style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: '550px', overflowY: 'auto' }}>
           <h4 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Calendar size={18} className="text-teal" />
+            <Calendar size={18} className="text-rose" />
             Journal History
           </h4>
           

@@ -7,19 +7,19 @@ const BREATH_MODES = {
     name: 'Box Breathing (4-4-4-4)',
     description: 'Used by high-performers & Navy SEALs to relieve acute stress and restore focus.',
     sequence: [
-      { action: 'Inhale', duration: 4, scale: 1.2, color: 'var(--accent-teal)' },
-      { action: 'Hold', duration: 4, scale: 1.2, color: 'var(--accent-violet)' },
-      { action: 'Exhale', duration: 4, scale: 0.85, color: '#0d9488' },
-      { action: 'Hold', duration: 4, scale: 0.85, color: '#1f2937' }
+      { action: 'Inhale', duration: 4, scale: 1.2, color: '#f43f5e' },
+      { action: 'Hold', duration: 4, scale: 1.2, color: '#8b5cf6' },
+      { action: 'Exhale', duration: 4, scale: 0.85, color: '#6366f1' },
+      { action: 'Hold', duration: 4, scale: 0.85, color: '#1e1b4b' }
     ]
   },
   CALM: {
     name: 'Relaxation Breathing (4-7-8)',
     description: 'A classic pranayama technique that acts as a natural nervous system tranquilizer.',
     sequence: [
-      { action: 'Inhale', duration: 4, scale: 1.2, color: 'var(--accent-teal)' },
-      { action: 'Hold', duration: 7, scale: 1.2, color: 'var(--accent-violet)' },
-      { action: 'Exhale', duration: 8, scale: 0.85, color: '#0d9488' }
+      { action: 'Inhale', duration: 4, scale: 1.2, color: '#f43f5e' },
+      { action: 'Hold', duration: 7, scale: 1.2, color: '#8b5cf6' },
+      { action: 'Exhale', duration: 8, scale: 0.85, color: '#6366f1' }
     ]
   }
 };
@@ -104,13 +104,13 @@ export default function BreathingBubble({ onCycleComplete, onTriggerAlert }) {
     <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       <div className="flex-between">
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Wind className="text-teal" style={{ width: 24, height: 24 }} />
+          <Wind className="text-rose" style={{ width: 24, height: 24 }} />
           <h3>Mindful Breathing</h3>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <button 
             className={`btn btn-secondary ${modeKey === 'BOX' ? 'active' : ''}`}
-            style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', border: modeKey === 'BOX' ? '1px solid var(--accent-teal)' : '' }}
+            style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', border: modeKey === 'BOX' ? '1px solid var(--accent-rose)' : '' }}
             onClick={() => handleModeChange('BOX')}
             disabled={isPlaying}
             aria-pressed={modeKey === 'BOX'}
@@ -120,7 +120,7 @@ export default function BreathingBubble({ onCycleComplete, onTriggerAlert }) {
           </button>
           <button 
             className={`btn btn-secondary ${modeKey === 'CALM' ? 'active' : ''}`}
-            style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', border: modeKey === 'CALM' ? '1px solid var(--accent-teal)' : '' }}
+            style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', border: modeKey === 'CALM' ? '1px solid var(--accent-rose)' : '' }}
             onClick={() => handleModeChange('CALM')}
             disabled={isPlaying}
             aria-pressed={modeKey === 'CALM'}
@@ -141,7 +141,7 @@ export default function BreathingBubble({ onCycleComplete, onTriggerAlert }) {
           style={{
             transform: isPlaying ? `scale(${currentStep.scale})` : 'scale(1)',
             backgroundColor: isPlaying ? currentStep.color : 'rgba(255, 255, 255, 0.05)',
-            border: isPlaying ? 'none' : '2px dashed var(--accent-teal)',
+            border: isPlaying ? 'none' : '2px dashed var(--accent-rose)',
             transition: isPlaying ? `transform ${currentStep.duration}s linear, background-color 0.5s ease` : 'all 0.5s ease',
             display: 'flex',
             flexDirection: 'column',
@@ -164,7 +164,7 @@ export default function BreathingBubble({ onCycleComplete, onTriggerAlert }) {
         {isPlaying ? (
           <div>
             <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Cycles Completed: </span>
-            <strong style={{ color: 'var(--accent-teal)', fontSize: '1.1rem' }}>{totalCyclesCompleted}</strong>
+            <strong style={{ color: 'var(--accent-rose)', fontSize: '1.1rem' }}>{totalCyclesCompleted}</strong>
             <span className="badge badge-success" style={{ fontSize: '0.75rem', marginLeft: '0.5rem' }}>+30 XP each!</span>
           </div>
         ) : (
@@ -175,7 +175,7 @@ export default function BreathingBubble({ onCycleComplete, onTriggerAlert }) {
       <div className="flex-center">
         <button 
           onClick={handleStartStop} 
-          className={`btn ${isPlaying ? 'btn-secondary' : 'btn-teal'}`}
+          className={`btn ${isPlaying ? 'btn-secondary' : 'btn-rose'}`}
           style={{ width: '100%', maxWidth: '240px' }}
         >
           {isPlaying ? (
