@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import PropTypes from 'prop-types';
 import { Gamepad2, Play, RefreshCw, Award, Heart, Sparkles } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -309,3 +310,15 @@ export default function StressBusterGame({ examProfile, onXpReward, onTriggerAle
     </div>
   );
 }
+
+StressBusterGame.propTypes = {
+  /** Logged-in student profile for personalized balloon labels. */
+  examProfile: PropTypes.shape({
+    exam: PropTypes.string,
+    username: PropTypes.string
+  }),
+  /** Callback to award XP to the parent app on balloon pop milestones. */
+  onXpReward: PropTypes.func,
+  /** Callback to display alert dialogs in the parent modal system. */
+  onTriggerAlert: PropTypes.func
+};

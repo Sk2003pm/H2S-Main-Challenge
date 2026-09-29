@@ -9,16 +9,31 @@
   --text-muted: #64748b;
   
   --accent-violet: #8b5cf6;
-  --accent-violet-glow: rgba(139, 92, 246, 0.15);
-  --accent-teal: #14b8a6;
-  --accent-teal-glow: rgba(20, 184, 166, 0.15);
+  --accent-violet-glow: rgba(139, 92, 246, 0.25);
+  --accent-teal: #00f5d4;
+  --accent-teal-glow: rgba(0, 245, 212, 0.25);
+  --accent-cyan: #00f5d4;
+  --accent-cyan-glow: rgba(0, 245, 212, 0.25);
+  --accent-magenta: #f72585;
+  --accent-magenta-glow: rgba(247, 37, 133, 0.25);
+  --accent-purple: #7209b7;
+  --accent-purple-glow: rgba(114, 9, 183, 0.25);
+  --accent-gold: #ffb703;
+  --accent-gold-glow: rgba(255, 183, 3, 0.25);
+  --accent-blue: #4361ee;
+  --accent-emerald: #10b981;
   
   --danger: #ef4444;
-  --danger-glow: rgba(239, 68, 68, 0.15);
-  --warning: #f59e0b;
-  --warning-glow: rgba(245, 158, 11, 0.15);
-  --success: #22c55e;
-  --success-glow: rgba(34, 197, 94, 0.15);
+  --danger-glow: rgba(239, 68, 68, 0.2);
+  --warning: #ffb703;
+  --warning-glow: rgba(255, 183, 3, 0.2);
+  --success: #10b981;
+  --success-glow: rgba(16, 185, 129, 0.2);
+
+  --gradient-aurora: linear-gradient(135deg, #00f5d4 0%, #7209b7 50%, #f72585 100%);
+  --gradient-cyber: linear-gradient(135deg, #00f5d4 0%, #4361ee 100%);
+  --gradient-sunset: linear-gradient(135deg, #f72585 0%, #ffb703 100%);
+  --gradient-neon: linear-gradient(135deg, #7209b7 0%, #f72585 100%);
 
   --font-title: 'Outfit', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   --font-body: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
@@ -28,9 +43,10 @@
   --border-radius-lg: 24px;
   --border-radius-full: 9999px;
   
-  --border-light: 1px solid rgba(255, 255, 255, 0.08);
-  --border-violet: 1px solid rgba(139, 92, 246, 0.2);
-  --border-teal: 1px solid rgba(20, 184, 166, 0.2);
+  --border-light: 1px solid rgba(255, 255, 255, 0.1);
+  --border-violet: 1px solid rgba(139, 92, 246, 0.35);
+  --border-teal: 1px solid rgba(0, 245, 212, 0.35);
+  --border-magenta: 1px solid rgba(247, 37, 133, 0.35);
   
   --transition-fast: 0.15s ease;
   --transition-normal: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1088,5 +1104,47 @@ textarea:focus-visible,
   border-radius: 50%;
   background-color: currentColor;
   animation: pulse-glow 1s infinite ease-in-out;
+}
+
+/* Next-Level 3D Three.js Engine & Authentication Portal Styles */
+.particles-3d-canvas-wrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.particles-hud-pill {
+  user-select: none;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.auth-portal-wrapper {
+  width: 100%;
+}
+
+@media (max-width: 860px) {
+  .auth-portal-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1.25rem !important;
+  }
+}
+
+.dimensional-visualizer-card {
+  position: relative;
+}
+
+.dimensional-visualizer-card::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle at center, rgba(20, 184, 166, 0.04) 0%, transparent 60%);
+  pointer-events: none;
 }
 

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
+import PropTypes from 'prop-types';
 import { Video, VideoOff, Mic, MicOff, Volume2, Sparkles, AlertTriangle } from 'lucide-react';
 import { storage } from '../utils/storage';
+import DimensionalAnalysisVisualizer from './DimensionalAnalysisVisualizer';
 
 export default function AuraLive({ examProfile, onTriggerConfirm }) {
   const [isActive, setIsActive] = useState(false);
@@ -320,7 +322,11 @@ export default function AuraLive({ examProfile, onTriggerConfirm }) {
             aria-label="Student live webcam view"
           />
           {!cameraActive && (
-            <div className="camera-placeholder text-muted">🧘</div>
+            <div className="camera-placeholder" style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+              <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <DimensionalAnalysisVisualizer isAnalyzing={isListening || isLoading || isSpeaking} compact={true} />
+              </div>
+            </div>
           )}
         </div>
 
@@ -439,3 +445,14 @@ export default function AuraLive({ examProfile, onTriggerConfirm }) {
     </div>
   );
 }
+
+AuraLive.propTypes = {
+  /** Active student exam profile for contextual wellness counseling prompts. */
+  examProfile: PropTypes.shape({
+    exam: PropTypes.string,
+    name: PropTypes.string,
+    username: PropTypes.string
+  }),
+  /** Callback to display confirm dialogs in the parent modal system. */
+  onTriggerConfirm: PropTypes.func
+};

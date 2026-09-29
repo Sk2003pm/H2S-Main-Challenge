@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import PropTypes from 'prop-types';
 import { Timer, Play, Pause, RotateCcw, Volume2, VolumeX, Calendar } from 'lucide-react';
 
 export default function FocusMode({ examProfile, onTimerComplete, onTriggerAlert }) {
@@ -344,3 +345,16 @@ export default function FocusMode({ examProfile, onTimerComplete, onTriggerAlert
     </div>
   );
 }
+
+FocusMode.propTypes = {
+  /** Active user exam profile for exam date countdown display. */
+  examProfile: PropTypes.shape({
+    exam: PropTypes.string,
+    examDate: PropTypes.string,
+    username: PropTypes.string
+  }),
+  /** Called when a Pomodoro focus timer completes, to award XP. */
+  onTimerComplete: PropTypes.func,
+  /** Callback to display alert dialogs in the parent modal system. */
+  onTriggerAlert: PropTypes.func
+};

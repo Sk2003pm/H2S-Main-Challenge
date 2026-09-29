@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import { 
   Heart, 
   LayoutDashboard, 
@@ -26,11 +27,14 @@ import JournalAnalyzer from './components/JournalAnalyzer';
 import ChatCompanion from './components/ChatCompanion';
 import StressBusterGame from './components/StressBusterGame';
 import AuraLive from './components/AuraLive';
+import ThreeDimensionalParticles from './components/ThreeDimensionalParticles';
+import ThreeDimensionalAuthPortal from './components/ThreeDimensionalAuthPortal';
 import confetti from 'canvas-confetti';
 
 export default function App() {
   const [profile, setProfile] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [isGlobalAnalyzing, setIsGlobalAnalyzing] = useState(false);
   
   // Auth view switcher
   const [authMode, setAuthMode] = useState('login');
@@ -441,204 +445,45 @@ export default function App() {
     }
   };
 
-  // Render Login & Signup onboarding if user is not authenticated
+  // Render Next-Level 3D Three.js Interactive Authentication Portal if user is not authenticated
   if (!profile) {
     return (
-      <div className="setup-container" style={{ margin: '3.5rem auto' }}>
-        <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', alignItems: 'center' }}>
-            <Heart size={32} className="text-teal" />
-            <h1 style={{ fontSize: '2.5rem', fontWeight: '800' }} className="text-gradient">MindAlign</h1>
-          </div>
-          <p className="text-muted">Empathetic AI Companion for Competitive Exam Aspirants</p>
-        </div>
-
-        {/* Toggle between Login and Signup */}
-        <div style={{ display: 'flex', background: 'rgba(255, 255, 255, 0.03)', padding: '4px', borderRadius: 'var(--border-radius-md)', border: 'var(--border-light)' }}>
-          <button 
-            type="button" 
-            className={`btn btn-secondary ${authMode === 'login' ? 'active' : ''}`}
-            onClick={() => setAuthMode('login')}
-            style={{ flex: 1, padding: '0.6rem', border: 'none', background: authMode === 'login' ? 'rgba(255,255,255,0.06)' : 'transparent' }}
-          >
-            Sign In
-          </button>
-          <button 
-            type="button" 
-            className={`btn btn-secondary ${authMode === 'signup' ? 'active' : ''}`}
-            onClick={() => setAuthMode('signup')}
-            style={{ flex: 1, padding: '0.6rem', border: 'none', background: authMode === 'signup' ? 'rgba(255,255,255,0.06)' : 'transparent' }}
-          >
-            Register Account
-          </button>
-        </div>
-
-        {authMode === 'login' ? (
-          <form className="glass-panel" onSubmit={handleLoginSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            <h3 style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem', fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Lock size={18} className="text-teal" /> Sign In to Your Companion
-            </h3>
-
-            <div className="form-group">
-              <label htmlFor="login-username">Username</label>
-              <input 
-                id="login-username"
-                type="text" 
-                className="input-field" 
-                placeholder="e.g. skand" 
-                value={usernameInput}
-                onChange={(e) => setUsernameInput(e.target.value)}
-                required 
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="login-password">Password</label>
-              <input 
-                id="login-password"
-                type="password" 
-                className="input-field" 
-                placeholder="••••••" 
-                value={passwordInput}
-                onChange={(e) => setPasswordInput(e.target.value)}
-                required 
-              />
-            </div>
-
-            <button type="submit" className="btn btn-teal" style={{ width: '100%', marginTop: '0.5rem' }}>
-              Authenticate
-            </button>
-          </form>
-        ) : (
-          <form className="glass-panel" onSubmit={handleSignupSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            <h3 style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem', fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <UserCheck size={18} className="text-violet" /> Create Wellness Account
-            </h3>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-              <div className="form-group">
-                <label htmlFor="signup-username">Username</label>
-                <input 
-                  id="signup-username"
-                  type="text" 
-                  className="input-field" 
-                  placeholder="e.g. skand" 
-                  value={usernameInput}
-                  onChange={(e) => setUsernameInput(e.target.value)}
-                  required 
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="signup-password">Password (Min. 6 chars)</label>
-                <input 
-                  id="signup-password"
-                  type="password" 
-                  className="input-field" 
-                  placeholder="••••••" 
-                  value={passwordInput}
-                  onChange={(e) => setPasswordInput(e.target.value)}
-                  required 
-                />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="signup-name">Full Name / Nickname</label>
-              <input 
-                id="signup-name"
-                type="text" 
-                className="input-field" 
-                placeholder="e.g. Skand Mishra" 
-                value={setupName}
-                onChange={(e) => setSetupName(e.target.value)}
-                required 
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Select Profile Avatar</label>
-              <div className="avatar-grid" role="radiogroup" aria-label="Select Profile Avatar">
-                {avatars.map((av) => (
-                  <button 
-                    type="button"
-                    key={av} 
-                    className={`avatar-option ${setupAvatar === av ? 'selected' : ''}`}
-                    onClick={() => setSetupAvatar(av)}
-                    aria-label={`Select avatar ${av}`}
-                    aria-pressed={setupAvatar === av}
-                    style={{ border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}
-                  >
-                    {av}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="signup-exam">Target Competitive Exam</label>
-              <select 
-                id="signup-exam"
-                className="input-field" 
-                style={{ backgroundColor: 'var(--bg-tertiary)' }}
-                value={setupExam}
-                onChange={(e) => setSetupExam(e.target.value)}
-              >
-                {exams.map((ex) => (
-                  <option key={ex} value={ex}>{ex}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="signup-date">Exam Date (Used for Timeline Countdown)</label>
-              <input 
-                id="signup-date"
-                type="date" 
-                className="input-field" 
-                value={setupDate}
-                onChange={(e) => setSetupDate(e.target.value)}
-                required 
-              />
-            </div>
-
-            <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '0.5rem' }}>
-              Register & Setup Profile
-            </button>
-          </form>
-        )}
-
-        <div className="glass-panel" style={{ padding: '0.75rem 1rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-          <ShieldCheck size={28} className="text-teal" style={{ flexShrink: 0 }} />
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: '1.3' }}>
-            <strong>Security Protocol:</strong> All student accounts and journal text credentials are secure and saved offline-first. Gemini processing occurs directly via secure serverless nodes.
-          </p>
-        </div>
-
-        {/* Modal display for auth screen alert overlays */}
-        {modal.isOpen && (
-          <div className="modal-overlay">
-            <div className="modal-card">
-              <div className="modal-header">
-                <Sparkles size={18} className="text-teal" />
-                <span>{modal.title}</span>
-              </div>
-              <div className="modal-body">{modal.message}</div>
-              <div className="modal-actions">
-                <button className="btn btn-teal" onClick={() => setModal({ ...modal, isOpen: false })}>
-                  Acknowledge
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+      <div className="setup-wrapper" style={{ position: 'relative', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <ThreeDimensionalParticles isAnalyzing={false} stressLevel={50} activeMode="nebula" />
+        <ThreeDimensionalAuthPortal
+          authMode={authMode}
+          setAuthMode={setAuthMode}
+          usernameInput={usernameInput}
+          setUsernameInput={setUsernameInput}
+          passwordInput={passwordInput}
+          setPasswordInput={setPasswordInput}
+          setupName={setupName}
+          setSetupName={setSetupName}
+          setupExam={setupExam}
+          setSetupExam={setSetupExam}
+          setupDate={setupDate}
+          setSetupDate={setSetupDate}
+          setupAvatar={setupAvatar}
+          setSetupAvatar={setSetupAvatar}
+          handleLoginSubmit={handleLoginSubmit}
+          handleSignupSubmit={handleSignupSubmit}
+          avatars={avatars}
+          exams={exams}
+          modal={modal}
+          setModal={setModal}
+        />
       </div>
     );
   }
 
-  // Authenticated Dashboard Layout
+  // Authenticated Dashboard Layout with Interactive 3D Background
   return (
-    <div className="app-container">
+    <div className="app-container" style={{ position: 'relative' }}>
+      <ThreeDimensionalParticles 
+        isAnalyzing={isGlobalAnalyzing} 
+        stressLevel={stats.avgStress || 50} 
+        activeMode={stats.avgStress > 70 ? 'quantum' : 'nebula'}
+      />
       {/* Sidebar Navigation */}
       <nav className="navbar">
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', padding: '0 1rem' }} className="nav-logo">
@@ -789,6 +634,84 @@ export default function App() {
               </div>
             </div>
 
+            {/* Stats widgets */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+              <div className="glass-panel text-center" style={{ padding: '1rem' }}>
+                <span className="text-muted" style={{ fontSize: '0.8rem', display: 'block', marginBottom: '0.25rem' }}>Avg. Stress</span>
+                <span style={{ fontSize: '1.8rem', fontWeight: '800', fontFamily: 'var(--font-title)' }} className="text-gradient">
+                  {stats.avgStress > 0 ? `${stats.avgStress}%` : 'N/A'}
+                </span>
+              </div>
+              <div className="glass-panel text-center" style={{ padding: '1rem' }}>
+                <span className="text-muted" style={{ fontSize: '0.8rem', display: 'block', marginBottom: '0.25rem' }}>Journal Logs</span>
+                <span style={{ fontSize: '1.8rem', fontWeight: '800', fontFamily: 'var(--font-title)' }} className="text-gradient">
+                  {stats.journalsCount}
+                </span>
+              </div>
+              <div className="glass-panel text-center" style={{ padding: '1rem' }}>
+                <span className="text-muted" style={{ fontSize: '0.8rem', display: 'block', marginBottom: '0.25rem' }}>Mindful Cycles</span>
+                <span style={{ fontSize: '1.8rem', fontWeight: '800', fontFamily: 'var(--font-title)' }} className="text-gradient">
+                  {stats.calmCycles}
+                </span>
+              </div>
+            </div>
+
+            {/* Mood Trend Sparkline Chart — visualises last 7 journal mood scores */}
+            {(() => {
+              const logs = storage.getJournalLogs().slice(0, 7).reverse();
+              if (logs.length < 2) return null;
+              const CHART_H = 60;
+              const maxScore = 100;
+              return (
+                <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <div className="flex-between">
+                    <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0, fontSize: '0.95rem' }}>
+                      <Activity className="text-teal" size={18} /> Wellness Mood Trend
+                    </h3>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Last {logs.length} entries</span>
+                  </div>
+                  <div
+                    style={{ display: 'flex', alignItems: 'flex-end', gap: '8px', height: `${CHART_H}px`, padding: '0 0.25rem' }}
+                    role="img"
+                    aria-label={`Mood trend chart showing last ${logs.length} wellness entries`}
+                  >
+                    {logs.map((log, i) => {
+                      const score = log.analysis?.mood_score ?? 50;
+                      const barH = Math.max(6, Math.round((score / maxScore) * CHART_H));
+                      const color = score >= 65 ? 'var(--accent-teal)' : score >= 40 ? 'var(--warning)' : 'var(--danger)';
+                      return (
+                        <div
+                          key={log.id ?? i}
+                          title={`${new Date(log.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}: Mood ${score}/100`}
+                          style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', flex: 1 }}
+                        >
+                          <span style={{ fontSize: '0.6rem', color: 'var(--text-muted)' }}>{score}</span>
+                          <div style={{
+                            width: '100%', maxWidth: '28px', height: `${barH}px`, background: color,
+                            borderRadius: '4px 4px 0 0', opacity: 0.85, transition: 'height 0.3s ease', minHeight: '6px'
+                          }} />
+                          <span style={{ fontSize: '0.55rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+                            {new Date(log.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                    <span style={{ fontSize: '0.65rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--accent-teal)', display: 'inline-block' }} /> Good (65+)
+                    </span>
+                    <span style={{ fontSize: '0.65rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--warning)', display: 'inline-block' }} /> Moderate (40–64)
+                    </span>
+                    <span style={{ fontSize: '0.65rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--danger)', display: 'inline-block' }} /> Low (&lt;40)
+                    </span>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Quick mood check-in */}
             <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               <div className="flex-between">
@@ -910,29 +833,8 @@ export default function App() {
               )}
             </div>
 
-            {/* Stats widgets */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
-              <div className="glass-panel text-center" style={{ padding: '1rem' }}>
-                <span className="text-muted" style={{ fontSize: '0.8rem', display: 'block', marginBottom: '0.25rem' }}>Avg. Stress</span>
-                <span style={{ fontSize: '1.8rem', fontWeight: '800', fontFamily: 'var(--font-title)' }} className="text-gradient">
-                  {stats.avgStress > 0 ? `${stats.avgStress}%` : 'N/A'}
-                </span>
-              </div>
-              <div className="glass-panel text-center" style={{ padding: '1rem' }}>
-                <span className="text-muted" style={{ fontSize: '0.8rem', display: 'block', marginBottom: '0.25rem' }}>Journal Logs</span>
-                <span style={{ fontSize: '1.8rem', fontWeight: '800', fontFamily: 'var(--font-title)' }} className="text-gradient">
-                  {stats.journalsCount}
-                </span>
-              </div>
-              <div className="glass-panel text-center" style={{ padding: '1rem' }}>
-                <span className="text-muted" style={{ fontSize: '0.8rem', display: 'block', marginBottom: '0.25rem' }}>Mindful Cycles</span>
-                <span style={{ fontSize: '1.8rem', fontWeight: '800', fontFamily: 'var(--font-title)' }} className="text-gradient">
-                  {stats.calmCycles}
-                </span>
-              </div>
             </div>
 
-          </div>
 
           <div className="db-col-4">
             <FocusMode examProfile={profile} onTimerComplete={() => rewardXp(50, "Focus Session Complete")} onTriggerAlert={triggerAlert} />
@@ -942,7 +844,12 @@ export default function App() {
 
       {activeTab === 'journal' && (
         <div style={{ animation: 'slide-up var(--transition-normal) ease' }}>
-          <JournalAnalyzer examProfile={profile} onAnalysisComplete={handleJournalAnalyzed} onCopingChecked={() => rewardXp(20, "Coping Task Completed")} />
+          <JournalAnalyzer 
+            examProfile={profile} 
+            onAnalysisComplete={handleJournalAnalyzed} 
+            onCopingChecked={() => rewardXp(20, "Coping Task Completed")}
+            onAnalyzingChange={setIsGlobalAnalyzing}
+          />
         </div>
       )}
 
@@ -974,7 +881,7 @@ export default function App() {
 
       {/* Premium Reusable Dialog Modal Overlay */}
       {modal.isOpen && (
-        <div className="modal-overlay">
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-label={modal.title}>
           <div className="modal-card">
             <div className="modal-header">
               <Sparkles size={18} className="text-teal" />

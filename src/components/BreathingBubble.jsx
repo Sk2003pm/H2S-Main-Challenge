@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import PropTypes from 'prop-types';
 import { Wind, Play, Square } from 'lucide-react';
 
 const BREATH_MODES = {
@@ -191,3 +192,10 @@ export default function BreathingBubble({ onCycleComplete, onTriggerAlert }) {
     </div>
   );
 }
+
+BreathingBubble.propTypes = {
+  /** Called when a full breathing cycle completes, to award XP. */
+  onCycleComplete: PropTypes.func,
+  /** Callback to display alert dialogs in the parent modal system. */
+  onTriggerAlert: PropTypes.func
+};

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import PropTypes from 'prop-types';
 import { Send, Trash2, Heart, Sparkles } from 'lucide-react';
 import { storage } from '../utils/storage';
 
@@ -149,7 +150,7 @@ export default function ChatCompanion({ examProfile, onTriggerConfirm }) {
         </button>
       </div>
 
-      <div className="chat-messages">
+      <div className="chat-messages" aria-live="polite" aria-label="Conversation with Aura">
         {messages.map((msg, idx) => (
           <div key={idx} className={`chat-bubble-wrapper ${msg.role === 'user' ? 'user' : 'model'}`}>
             <div className="chat-bubble">
@@ -215,3 +216,14 @@ export default function ChatCompanion({ examProfile, onTriggerConfirm }) {
     </div>
   );
 }
+
+ChatCompanion.propTypes = {
+  /** The current logged-in student's exam profile object. */
+  examProfile: PropTypes.shape({
+    exam: PropTypes.string,
+    name: PropTypes.string,
+    username: PropTypes.string
+  }),
+  /** Callback to open a confirm dialog. */
+  onTriggerConfirm: PropTypes.func
+};

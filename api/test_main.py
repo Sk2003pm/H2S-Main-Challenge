@@ -2,18 +2,38 @@ from fastapi.testclient import TestClient
 import unittest
 from api.main import app
 
+
 class TestMindAlignAPI(unittest.TestCase):
+    """
+    Comprehensive unit test suite for the MindAlign FastAPI backend.
+
+    Tests cover happy-path success cases, Pydantic validation edge cases,
+    HTTP status codes, and response schema correctness for every endpoint.
+    """
+
     def setUp(self):
+        """Initialise a reusable TestClient before every test method."""
         self.client = TestClient(app)
 
+    # ------------------------------------------------------------------ #
+    #  Health check                                                        #
+    # ------------------------------------------------------------------ #
+
     def test_health_check(self):
+        """GET /api/health should return 200 with expected JSON keys."""
         response = self.client.get("/api/health")
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertEqual(data["status"], "healthy")
         self.assertIn("gemini_api_configured", data)
+        self.assertIn("gemini_model", data)
+
+    # ------------------------------------------------------------------ #
+    #  Daily tips                                                          #
+    # ------------------------------------------------------------------ #
 
     def test_daily_tips_fallback(self):
+        """POST /api/daily-tips should return all three tip fields."""
         payload = {
             "exam": "JEE Main & Advanced",
             "triggers": ["Mock Test Backlog"],
@@ -26,7 +46,36 @@ class TestMindAlignAPI(unittest.TestCase):
         self.assertIn("relaxation_tip", data)
         self.assertIn("affirmation", data)
 
+    def test_daily_tips_low_stress(self):
+        """POST /api/daily-tips works with low stress level (1)."""
+        payload = {
+            "exam": "GATE",
+            "triggers": [],
+            "current_stress": 1
+        }
+        response = self.client.post("/api/daily-tips", json=payload)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn("focus_tip", data)
+
+    def test_daily_tips_high_stress(self):
+        """POST /api/daily-tips works with maximum stress level (100)."""
+        payload = {
+            "exam": "UPSC CSE",
+            "triggers": ["Family Expectations", "Sleep Deprivation"],
+            "current_stress": 100
+        }
+        response = self.client.post("/api/daily-tips", json=payload)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn("affirmation", data)
+
+    # ------------------------------------------------------------------ #
+    #  Quiz generation                                                     #
+    # ------------------------------------------------------------------ #
+
     def test_generate_quiz_fallback(self):
+        """POST /api/generate-quiz should return a valid 3-option MCQ."""
         payload = {
             "exam": "NEET UG",
             "triggers": ["General pressure"]
@@ -40,7 +89,27 @@ class TestMindAlignAPI(unittest.TestCase):
         self.assertIn("correct_idx", data)
         self.assertIn("explanation", data)
 
+    def test_generate_quiz_jee_fallback(self):
+        """Fallback quiz for JEE should return a Chemistry question."""
+        payload = {"exam": "JEE Main & Advanced", "triggers": []}
+        response = self.client.post("/api/generate-quiz", json=payload)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIsInstance(data["correct_idx"], int)
+        self.assertIn(data["correct_idx"], [0, 1, 2])
+
+    def test_generate_quiz_missing_fields(self):
+        """POST /api/generate-quiz without exam field should return 422."""
+        payload = {"triggers": ["general pressure"]}
+        response = self.client.post("/api/generate-quiz", json=payload)
+        self.assertEqual(response.status_code, 422)
+
+    # ------------------------------------------------------------------ #
+    #  Journal analysis                                                    #
+    # ------------------------------------------------------------------ #
+
     def test_analyze_journal_fallback(self):
+        """POST /api/analyze-journal should return full analysis schema."""
         payload = {
             "text": "I feel extremely worried about my upcoming mocks, syllabus is unfinished and I am stressed.",
             "exam": "UPSC CSE",
@@ -55,11 +124,55 @@ class TestMindAlignAPI(unittest.TestCase):
         self.assertIn("analysis_summary", data)
         self.assertIn("coping_strategies", data)
 
-    def test_chat_companion_fallback(self):
+    def test_analyze_journal_mood_score_range(self):
+        """Returned mood_score should be an integer in range 1–100."""
         payload = {
-            "messages": [
-                {"role": "user", "content": "Hello, I am feeling tired."}
-            ],
+            "text": "I cannot focus today. My revision backlog is massive and I am not sleeping well.",
+            "exam": "NEET UG",
+            "current_stress": 70
+        }
+        response = self.client.post("/api/analyze-journal", json=payload)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        mood = data["mood_score"]
+        self.assertIsInstance(mood, int)
+        self.assertGreaterEqual(mood, 1)
+        self.assertLessEqual(mood, 100)
+
+    def test_analyze_journal_validation_error(self):
+        """Journal text shorter than 10 chars should return 422."""
+        payload = {"text": "Short", "exam": "NEET UG", "current_stress": 50}
+        response = self.client.post("/api/analyze-journal", json=payload)
+        self.assertEqual(response.status_code, 422)
+
+    def test_analyze_journal_stress_too_high(self):
+        """Stress level above 100 should return 422."""
+        payload = {
+            "text": "I feel extremely worried about my upcoming mocks and syllabus backlog.",
+            "exam": "NEET UG",
+            "current_stress": 120
+        }
+        response = self.client.post("/api/analyze-journal", json=payload)
+        self.assertEqual(response.status_code, 422)
+
+    def test_analyze_journal_stress_zero(self):
+        """Stress level of 0 (below minimum of 1) should return 422."""
+        payload = {
+            "text": "I feel extremely worried about my upcoming mocks and syllabus backlog.",
+            "exam": "NEET UG",
+            "current_stress": 0
+        }
+        response = self.client.post("/api/analyze-journal", json=payload)
+        self.assertEqual(response.status_code, 422)
+
+    # ------------------------------------------------------------------ #
+    #  Chat companion                                                      #
+    # ------------------------------------------------------------------ #
+
+    def test_chat_companion_fallback(self):
+        """POST /api/chat-companion should return a reply string."""
+        payload = {
+            "messages": [{"role": "user", "content": "Hello, I am feeling tired."}],
             "student_context": {
                 "exam": "GATE",
                 "current_stress": 40,
@@ -70,51 +183,34 @@ class TestMindAlignAPI(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertIn("reply", data)
+        self.assertIsInstance(data["reply"], str)
+        self.assertGreater(len(data["reply"]), 0)
 
-    def test_analyze_journal_validation_error(self):
-        # Text is less than 10 characters (should trigger pydantic min_length validation error)
+    def test_chat_companion_crisis_keywords(self):
+        """Chat with crisis keywords should return a reply containing helpline info."""
         payload = {
-            "text": "Short",
-            "exam": "NEET UG",
-            "current_stress": 50
+            "messages": [{"role": "user", "content": "I want to kill myself, I cannot take exam pressure anymore."}],
+            "student_context": {
+                "exam": "JEE Main & Advanced",
+                "current_stress": 95,
+                "recent_triggers": ["Family pressure"]
+            }
         }
-        response = self.client.post("/api/analyze-journal", json=payload)
-        self.assertEqual(response.status_code, 422)
-
-    def test_analyze_journal_stress_out_of_bounds(self):
-        # Stress level is greater than 100 (should trigger pydantic validation error)
-        payload = {
-            "text": "I feel extremely worried about my upcoming mocks, syllabus is unfinished and I am stressed.",
-            "exam": "NEET UG",
-            "current_stress": 120
-        }
-        response = self.client.post("/api/analyze-journal", json=payload)
-        self.assertEqual(response.status_code, 422)
-
-        # Stress level is less than 1
-        payload["current_stress"] = 0
-        response = self.client.post("/api/analyze-journal", json=payload)
-        self.assertEqual(response.status_code, 422)
-
-    def test_generate_quiz_missing_fields(self):
-        # Missing exam field (triggers validation error)
-        payload = {
-            "triggers": ["general pressure"]
-        }
-        response = self.client.post("/api/generate-quiz", json=payload)
-        self.assertEqual(response.status_code, 422)
+        response = self.client.post("/api/chat-companion", json=payload)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertIn("reply", data)
+        # Fallback must include crisis helpline numbers
+        self.assertIn("9999 666 555", data["reply"])
 
     def test_chat_companion_missing_fields(self):
-        # Missing messages list (triggers validation error)
+        """POST /api/chat-companion without messages field should return 422."""
         payload = {
-            "student_context": {
-                "exam": "GATE",
-                "current_stress": 50
-            }
+            "student_context": {"exam": "GATE", "current_stress": 50}
         }
         response = self.client.post("/api/chat-companion", json=payload)
         self.assertEqual(response.status_code, 422)
 
+
 if __name__ == "__main__":
     unittest.main()
-

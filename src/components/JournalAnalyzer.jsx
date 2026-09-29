@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import { PenTool, BrainCircuit, Activity, Heart, Quote, Calendar } from 'lucide-react';
 import { storage } from '../utils/storage';
 import confetti from 'canvas-confetti';
+import DimensionalAnalysisVisualizer from './DimensionalAnalysisVisualizer';
 
-export default function JournalAnalyzer({ examProfile, onAnalysisComplete, onCopingChecked }) {
+export default function JournalAnalyzer({ examProfile, onAnalysisComplete, onCopingChecked, onAnalyzingChange }) {
   const [entryText, setEntryText] = useState('');
   const [stressLevel, setStressLevel] = useState(50);
   const [isLoading, setIsLoading] = useState(false);
@@ -27,6 +29,7 @@ export default function JournalAnalyzer({ examProfile, onAnalysisComplete, onCop
     if (entryText.trim().length < 10) return;
 
     setIsLoading(true);
+    if (onAnalyzingChange) onAnalyzingChange(true);
     setCurrentAnalysis(null);
 
     try {
@@ -78,6 +81,9 @@ export default function JournalAnalyzer({ examProfile, onAnalysisComplete, onCop
       // Fail back gracefully silently
     } finally {
       setIsLoading(false);
+      if (onAnalyzingChange) {
+        onAnalyzingChange(false);
+      }
     }
   };
 
@@ -181,8 +187,16 @@ export default function JournalAnalyzer({ examProfile, onAnalysisComplete, onCop
           </form>
         </div>
 
+        {isLoading && (
+          <div style={{ marginTop: '1.25rem', animation: 'fade-in 0.3s ease' }}>
+            <DimensionalAnalysisVisualizer isAnalyzing={true} />
+          </div>
+        )}
+
         {currentAnalysis && (
-          <div className="glass-panel analysis-results-grid" style={{ animation: 'slide-up 0.4s ease' }}>
+          <div style={{ marginTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <DimensionalAnalysisVisualizer isAnalyzing={false} analysisResult={currentAnalysis} />
+            <div className="glass-panel analysis-results-grid" style={{ animation: 'slide-up 0.4s ease' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               <div>
                 <span className={`badge ${getMoodBadgeClass(currentAnalysis.mood_score)}`}>
@@ -262,8 +276,9 @@ export default function JournalAnalyzer({ examProfile, onAnalysisComplete, onCop
               </div>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+    </div>
 
       <div className="db-col-4">
         <div className="glass-panel" style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: '550px', overflowY: 'auto' }}>
@@ -305,3 +320,17 @@ export default function JournalAnalyzer({ examProfile, onAnalysisComplete, onCop
     </div>
   );
 }
+
+JournalAnalyzer.propTypes = {
+  /** Logged-in student exam profile for context-aware prompts. */
+  examProfile: PropTypes.shape({
+    exam: PropTypes.string,
+    username: PropTypes.string
+  }),
+  /** Called after a successful journal analysis to update parent XP and stats. */
+  onAnalysisComplete: PropTypes.func,
+  /** Called when the student checks off a coping strategy item. */
+  onCopingChecked: PropTypes.func,
+  /** Callback triggered when AI analysis starts or finishes to synchronize 3D particle universe. */
+  onAnalyzingChange: PropTypes.func
+};
