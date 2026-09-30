@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { PenTool, BrainCircuit, Activity, Heart, Quote, Calendar } from 'lucide-react';
 import { storage } from '../utils/storage';
@@ -12,7 +12,16 @@ export default function JournalAnalyzer({ examProfile, onAnalysisComplete, onCop
   
   const [currentAnalysis, setCurrentAnalysis] = useState(null);
   const [pastLogs, setPastLogs] = useState([]);
+  const [selectedLogId, setSelectedLogId] = useState(null);
   const [completedCopings, setCompletedCopings] = useState({});
+
+  const entryPreviewRef = useRef(null);
+  // The journal entry whose text and analysis are being shown
+  const selectedLog = pastLogs.find(log => log.id === selectedLogId) || null;
+
+  const formatEntryDate = (isoDate) => new Date(isoDate).toLocaleDateString(undefined, {
+    weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+  });
 
   useEffect(() => {
     setPastLogs(storage.getJournalLogs());
@@ -31,6 +40,7 @@ export default function JournalAnalyzer({ examProfile, onAnalysisComplete, onCop
     setIsLoading(true);
     if (onAnalyzingChange) onAnalyzingChange(true);
     setCurrentAnalysis(null);
+    setSelectedLogId(null);
 
     try {
       const response = await fetch('/api/analyze-journal', {
@@ -62,6 +72,7 @@ export default function JournalAnalyzer({ examProfile, onAnalysisComplete, onCop
       const updatedLogs = storage.addJournalLog(newLog);
       setPastLogs(updatedLogs);
       setCurrentAnalysis(result);
+      setSelectedLogId(newLog.id);
       
       if (onAnalysisComplete) {
         onAnalysisComplete(result);
@@ -108,6 +119,9 @@ export default function JournalAnalyzer({ examProfile, onAnalysisComplete, onCop
 
   const selectPastLog = (log) => {
     setCurrentAnalysis(log.analysis);
+    setSelectedLogId(log.id);
+    // Bring the entry preview into view (the history list can be far from it on small screens)
+    setTimeout(() => entryPreviewRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
   };
 
   const getMoodBadgeClass = (score) => {
@@ -195,6 +209,19 @@ export default function JournalAnalyzer({ examProfile, onAnalysisComplete, onCop
 
         {currentAnalysis && (
           <div style={{ marginTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            {selectedLog && (
+              <div ref={entryPreviewRef} className="glass-panel journal-entry-preview" style={{ animation: 'slide-up 0.3s ease' }}>
+                <div className="flex-between" style={{ gap: '0.75rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+                  <h4 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Quote size={16} className="text-violet" /> What you wrote
+                  </h4>
+                  <span className="text-muted" style={{ fontSize: '0.75rem' }}>
+                    {formatEntryDate(selectedLog.date)} · Stress {selectedLog.stress_input}%
+                  </span>
+                </div>
+                <p className="journal-entry-text">{selectedLog.text}</p>
+              </div>
+            )}
             <DimensionalAnalysisVisualizer isAnalyzing={false} analysisResult={currentAnalysis} />
             <div className="glass-panel analysis-results-grid" style={{ animation: 'slide-up 0.4s ease' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -294,11 +321,13 @@ export default function JournalAnalyzer({ examProfile, onAnalysisComplete, onCop
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {pastLogs.map((log) => (
-                <div 
-                  key={log.id} 
-                  className="glass-panel clickable" 
-                  style={{ padding: '0.75rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.35rem', borderRadius: 'var(--border-radius-sm)' }}
+                <button
+                  type="button"
+                  key={log.id}
+                  className={`glass-panel clickable journal-history-item ${log.id === selectedLogId ? 'active' : ''}`}
                   onClick={() => selectPastLog(log)}
+                  aria-pressed={log.id === selectedLogId}
+                  aria-label={`Show your journal entry from ${formatEntryDate(log.date)} and its analysis`}
                 >
                   <div className="flex-between">
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
@@ -308,10 +337,10 @@ export default function JournalAnalyzer({ examProfile, onAnalysisComplete, onCop
                       Mood: {log.analysis.mood_score}
                     </span>
                   </div>
-                  <p style={{ fontSize: '0.8rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--text-secondary)' }}>
+                  <p className="journal-history-excerpt">
                     {log.text}
                   </p>
-                </div>
+                </button>
               ))}
             </div>
           )}
