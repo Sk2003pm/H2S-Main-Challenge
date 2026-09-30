@@ -202,8 +202,9 @@ class DailyTipsResponse(BaseModel):
 
 class QuizResponse(BaseModel):
     question: str
-    options: List[str]
-    correct_idx: int
+    # Constraints are sent to Gemini as the response schema, so it cannot return 4-option (NEET-style) MCQs
+    options: List[str] = Field(..., min_length=3, max_length=3)
+    correct_idx: int = Field(..., ge=0, le=2)
     explanation: str
 
 def get_thinking_config(model_name: str) -> Optional[genai_types.ThinkingConfig]:
