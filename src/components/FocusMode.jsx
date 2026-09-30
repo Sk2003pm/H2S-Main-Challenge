@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { Timer, Play, Pause, RotateCcw, Volume2, VolumeX, Calendar } from 'lucide-react';
+import { useAmbientSound } from '../utils/ambientAudio';
 
 export default function FocusMode({ examProfile, onTimerComplete, onTriggerAlert }) {
   // Timer States
@@ -9,12 +10,9 @@ export default function FocusMode({ examProfile, onTimerComplete, onTriggerAlert
   const [isActive, setIsActive] = useState(false);
   const [mode, setMode] = useState('study'); // study (25m), break (5m), longBreak (15m)
   
-  // Ambient Sound States
-  const [soundPlaying, setSoundPlaying] = useState(null); // 'waves', 'binaural', null
-  
-  // Ref for AudioContext
-  const audioCtxRef = useRef(null);
-  const soundNodesRef = useRef({ source: null, gain: null, lfo: null });
+  // Ambient sounds (synthesised; shared with the breathing guide)
+  const { soundPlaying, toggleSound, stopSound } = useAmbientSound();
+
   const countdownIntervalRef = useRef(null);
 
   // Sync Timer settings on mode switch
@@ -98,135 +96,6 @@ export default function FocusMode({ examProfile, onTimerComplete, onTriggerAlert
     }
     setSeconds(0);
   };
-
-  // WEB AUDIO SYNTHESIS FOR FOCUS SOUNDS
-  const initAudioContext = () => {
-    if (!audioCtxRef.current) {
-      audioCtxRef.current = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    if (audioCtxRef.current.state === 'suspended') {
-      audioCtxRef.current.resume();
-    }
-  };
-
-  const stopFocusSounds = () => {
-    const nodes = soundNodesRef.current;
-    if (nodes.source) {
-      try {
-        nodes.source.stop();
-      } catch (e) {}
-      nodes.source = null;
-    }
-    if (nodes.lfo) {
-      try {
-        nodes.lfo.stop();
-      } catch (e) {}
-      nodes.lfo = null;
-    }
-    setSoundPlaying(null);
-  };
-
-  const playBinauralBeats = () => {
-    stopFocusSounds();
-    initAudioContext();
-    const ctx = audioCtxRef.current;
-
-    const merger = ctx.createChannelMerger(2);
-    
-    const oscL = ctx.createOscillator();
-    oscL.frequency.value = 200;
-    oscL.type = 'sine';
-    
-    const oscR = ctx.createOscillator();
-    oscR.frequency.value = 210; // creates 10Hz Alpha focus beats
-    oscR.type = 'sine';
-
-    const gainL = ctx.createGain();
-    const gainR = ctx.createGain();
-    gainL.gain.value = 0.05;
-    gainR.gain.value = 0.05;
-
-    oscL.connect(gainL);
-    oscR.connect(gainR);
-    
-    gainL.connect(merger, 0, 0);
-    gainR.connect(merger, 0, 1);
-
-    const masterGain = ctx.createGain();
-    masterGain.gain.value = 0.5;
-
-    merger.connect(masterGain);
-    masterGain.connect(ctx.destination);
-
-    oscL.start();
-    oscR.start();
-
-    soundNodesRef.current.source = {
-      stop: () => {
-        oscL.stop();
-        oscR.stop();
-      }
-    };
-    setSoundPlaying('binaural');
-  };
-
-  const playOceanWaves = () => {
-    stopFocusSounds();
-    initAudioContext();
-    const ctx = audioCtxRef.current;
-
-    const bufferSize = ctx.sampleRate * 2;
-    const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-    const output = noiseBuffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-      output[i] = Math.random() * 2 - 1;
-    }
-
-    const noiseSource = ctx.createBufferSource();
-    noiseSource.buffer = noiseBuffer;
-    noiseSource.loop = true;
-
-    const lowpass = ctx.createBiquadFilter();
-    lowpass.type = 'lowpass';
-    lowpass.frequency.value = 350;
-
-    const waveGain = ctx.createGain();
-    waveGain.gain.value = 0.02;
-
-    const lfo = ctx.createOscillator();
-    lfo.type = 'sine';
-    lfo.frequency.value = 0.08;
-
-    const lfoGain = ctx.createGain();
-    lfoGain.gain.value = 0.08;
-
-    lfo.connect(lfoGain);
-    lfoGain.connect(waveGain.gain);
-
-    noiseSource.connect(lowpass);
-    lowpass.connect(waveGain);
-    waveGain.connect(ctx.destination);
-
-    noiseSource.start();
-    lfo.start();
-
-    soundNodesRef.current.source = noiseSource;
-    soundNodesRef.current.lfo = lfo;
-    setSoundPlaying('waves');
-  };
-
-  const toggleSound = (soundType) => {
-    if (soundPlaying === soundType) {
-      stopFocusSounds();
-    } else {
-      if (soundType === 'binaural') playBinauralBeats();
-      if (soundType === 'waves') playOceanWaves();
-    }
-  };
-
-  useEffect(() => {
-    return () => stopFocusSounds();
-  }, []);
 
   const calculateDaysRemaining = () => {
     if (!examProfile || !examProfile.examDate) return null;
@@ -332,7 +201,7 @@ export default function FocusMode({ examProfile, onTimerComplete, onTriggerAlert
             <button 
               className="sound-btn"
               style={{ opacity: soundPlaying ? 1 : 0.5 }}
-              onClick={stopFocusSounds}
+              onClick={stopSound}
               disabled={!soundPlaying}
               aria-label="Mute focus audio"
             >

@@ -31,6 +31,8 @@ MindAlign is a Generative AI-powered digital wellness application built specific
      * **Navy SEAL Box Breathing** (4s inhale, 4s hold, 4s exhale, 4s hold) for immediate stress control.
      * **Relaxation Pranayama (4-7-8)** for nervous system stabilization.
    * Keyframe animations sync sizing with instructions to keep users centered.
+   * **Spoken Voice Guide**: A voice-over says "Breathe in", "Hold" and "Breathe out" with live captions. The bubble changes phase at the instant the voice starts, so the two stay in sync; it can be switched off.
+   * **Background Audio**: The same synthesized Ocean Waves and 10Hz Binaural Beats as the Focus timer can play under the voice.
 
 5. **⏱️ Focus Pomodoro & Countdown**:
    * Study countdown timer tracking exactly how many days remain until the student's target exam date.
