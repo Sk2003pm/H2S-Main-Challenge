@@ -1,12 +1,14 @@
 import os
-import json
+import time
 import logging
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 from fastapi import FastAPI, HTTPException, Body, Query, Path
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-import google.generativeai as genai
+from google import genai
+from google.genai import errors as genai_errors
+from google.genai import types as genai_types
 from dotenv import load_dotenv
 
 # SQLite Database & Gemini Groundtruth Guardrail Modules
@@ -21,41 +23,64 @@ except ImportError:
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("MindAlignBackend")
 
-# Load environment variables from project root .env
+# Load environment variables from project root .env (local development).
+# On Vercel the key comes from Project Settings -> Environment Variables; real env vars win over .env.
 root_env_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".env"))
-if os.path.exists(root_env_path):
-    load_dotenv(dotenv_path=root_env_path, override=True)
-load_dotenv(override=True)
+load_dotenv(dotenv_path=root_env_path)
 
-# Helper function to dynamically retrieve GEMINI_API_KEY from environment or .env
+# Accepted environment variable names for the Gemini key, in priority order
+GEMINI_KEY_ENV_VARS = ("GEMINI_API_KEY", "GOOGLE_API_KEY", "VITE_GEMINI_API_KEY")
+
+# Gemini model chain: GEMINI_MODEL (if set) first, then fast free-tier models (each has its own quota).
+DEFAULT_GEMINI_MODEL = "gemini-2.5-flash"
+FALLBACK_GEMINI_MODELS = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-3-flash-preview"]
+
+# Keep every request well inside the Vercel function limit (maxDuration in vercel.json).
+GEMINI_REQUEST_TIMEOUT_SECONDS = float(os.getenv("GEMINI_TIMEOUT_SECONDS", "25"))
+GEMINI_TOTAL_BUDGET_SECONDS = float(os.getenv("GEMINI_TOTAL_BUDGET_SECONDS", "45"))
+
+def get_gemini_key_source() -> Optional[str]:
+    """Returns the name of the environment variable that holds the Gemini key (never the key itself)."""
+    for name in GEMINI_KEY_ENV_VARS:
+        if os.getenv(name, "").strip().strip("\"'"):
+            return name
+    return None
+
 def get_gemini_api_key() -> str:
-    """
-    Dynamically retrieves GEMINI_API_KEY from os.environ or root .env,
-    ensuring 100% compatibility across local Vite dev and Vercel serverless functions.
-    """
-    key = os.getenv("GEMINI_API_KEY", "").strip() or os.getenv("VITE_GEMINI_API_KEY", "").strip()
-    if not key and os.path.exists(root_env_path):
-        load_dotenv(dotenv_path=root_env_path, override=True)
-        key = os.getenv("GEMINI_API_KEY", "").strip() or os.getenv("VITE_GEMINI_API_KEY", "").strip()
-    return key.strip("\"'")
+    """Retrieves the Gemini API key from the environment (Vercel env vars or the local .env)."""
+    source = get_gemini_key_source()
+    return os.getenv(source, "").strip().strip("\"'") if source else ""
 
-# Dynamic Gemini configuration
-def ensure_gemini_configured() -> bool:
+def get_gemini_models() -> List[str]:
+    configured_model = os.getenv("GEMINI_MODEL", "").strip() or DEFAULT_GEMINI_MODEL
+    models = [configured_model, *FALLBACK_GEMINI_MODELS]
+    # deduplicate keeping order
+    seen = set()
+    return [m for m in models if m and not (m in seen or seen.add(m))]
+
+_gemini_client: Optional[genai.Client] = None
+_gemini_client_key: Optional[str] = None
+
+def get_gemini_client() -> Optional[genai.Client]:
+    """Returns a cached google-genai client, or None when no API key is configured."""
+    global _gemini_client, _gemini_client_key
     key = get_gemini_api_key()
-    if key:
-        try:
-            genai.configure(api_key=key)
-            return True
-        except Exception as e:
-            logger.error(f"Error configuring Gemini API: {str(e)}")
-            return False
-    return False
+    if not key:
+        return None
+    if _gemini_client is None or _gemini_client_key != key:
+        _gemini_client = genai.Client(
+            api_key=key,
+            http_options=genai_types.HttpOptions(
+                timeout=int(GEMINI_REQUEST_TIMEOUT_SECONDS * 1000),  # milliseconds
+                # No hidden SDK retries: the model chain below handles failover within the time budget
+                retry_options=genai_types.HttpRetryOptions(attempts=1),
+            ),
+        )
+        _gemini_client_key = key
+    return _gemini_client
 
-# Initialize at startup
-_key_at_startup = get_gemini_api_key()
-if _key_at_startup:
-    ensure_gemini_configured()
-    logger.info("Gemini API configured successfully using GEMINI_API_KEY.")
+if get_gemini_api_key():
+    logger.info(f"Gemini API key found in {get_gemini_key_source()}. Models: {', '.join(get_gemini_models())}")
 else:
     logger.warning("GEMINI_API_KEY not found in environment. Running in sandbox/fallback mode.")
 
@@ -170,40 +195,82 @@ class QuizRequest(BaseModel):
     exam: str
     triggers: List[str]
 
+class DailyTipsResponse(BaseModel):
+    focus_tip: str
+    relaxation_tip: str
+    affirmation: str
+
+class QuizResponse(BaseModel):
+    question: str
+    options: List[str]
+    correct_idx: int
+    explanation: str
+
+def get_thinking_config(model_name: str) -> Optional[genai_types.ThinkingConfig]:
+    """Minimal thinking keeps short JSON/chat replies fast (thinking can take 10s+ otherwise)."""
+    name = model_name.lower()
+    if name.startswith("gemini-2.5"):
+        # 2.5 Pro cannot disable thinking (minimum budget 128); Flash / Flash-Lite can.
+        return genai_types.ThinkingConfig(thinking_budget=128 if "pro" in name else 0)
+    if name.startswith("gemini-3"):
+        return genai_types.ThinkingConfig(thinking_level=genai_types.ThinkingLevel.LOW)
+    return None  # aliases / unknown models: use the model default
+
+def is_key_or_permission_error(error: genai_errors.APIError) -> bool:
+    """Errors that no other model can fix (invalid, leaked/revoked or unauthorized API key)."""
+    message = str(getattr(error, "message", "") or error).lower()
+    return error.code == 401 or (error.code in (400, 403) and "api key" in message)
+
 # Safe model executor with active fallback chain
-def generate_content_with_fallback(prompt: str, response_mime_type: Optional[str] = None) -> str:
-    key = get_gemini_api_key()
-    if not key:
+def generate_content_with_fallback(
+    prompt: str,
+    response_mime_type: Optional[str] = None,
+    response_schema: Optional[type] = None,
+    system_instruction: Optional[str] = None,
+) -> str:
+    client = get_gemini_client()
+    if client is None:
         raise ValueError("GEMINI_API_KEY not configured in environment or .env")
-        
-    ensure_gemini_configured()
-    configured_model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash").strip() or "gemini-2.5-flash"
-    models_to_try = [configured_model, "gemini-2.5-flash", "gemini-2.5-pro", "gemini-flash-latest", "gemini-2.5-flash-lite"]
-    # deduplicate keeping order
-    seen = set()
-    models_to_try = [x for x in models_to_try if x and not (x in seen or seen.add(x))]
-    
-    last_error = None
-    for m_name in models_to_try:
+
+    deadline = time.monotonic() + GEMINI_TOTAL_BUDGET_SECONDS
+    last_error: Optional[Exception] = None
+    for m_name in get_gemini_models():
+        if last_error is not None and time.monotonic() > deadline - 5:
+            logger.warning("Gemini time budget exhausted; skipping remaining fallback models.")
+            break
         try:
             logger.info(f"Generating content using Gemini model: {m_name}")
-            model = genai.GenerativeModel(m_name)
-            config = {"response_mime_type": response_mime_type} if response_mime_type else None
-            response = model.generate_content(prompt, generation_config=config)
-            return response.text.strip()
+            config = genai_types.GenerateContentConfig(
+                system_instruction=system_instruction,
+                response_mime_type=response_mime_type,
+                response_schema=response_schema,
+                thinking_config=get_thinking_config(m_name),
+                automatic_function_calling=genai_types.AutomaticFunctionCallingConfig(disable=True),
+            )
+            response = client.models.generate_content(model=m_name, contents=prompt, config=config)
+            text = (response.text or "").strip()
+            if not text:
+                finish_reason = response.candidates[0].finish_reason if response.candidates else "NO_CANDIDATES"
+                raise ValueError(f"Empty response from '{m_name}' (finish_reason={finish_reason})")
+            return text
+        except genai_errors.APIError as e:
+            last_error = e
+            if is_key_or_permission_error(e):
+                logger.error(f"Gemini rejected the API key ({e.code} {e.status}): {e.message}")
+                raise
+            logger.warning(f"Gemini model '{m_name}' failed ({e.code} {e.status}): {e.message}. Trying next model...")
         except Exception as e:
             last_error = e
-            err_msg = str(e).lower()
-            if "not found" in err_msg or "404" in err_msg or "not supported" in err_msg or "model" in err_msg:
-                logger.warning(f"Gemini model '{m_name}' failed or not accessible: {str(e)}. Retrying next model...")
-                continue
-            else:
-                logger.warning(f"Model '{m_name}' general exception: {str(e)}. Retrying next model...")
-                continue
-                
+            logger.warning(f"Gemini model '{m_name}' failed: {type(e).__name__}: {str(e)}. Trying next model...")
+
     if last_error is not None:
         raise last_error
     raise RuntimeError("All models failed to generate content")
+
+def generate_json_with_fallback(prompt: str, schema: type) -> Dict[str, Any]:
+    """Structured-output call validated against a Pydantic schema, so a malformed reply can never 500 the endpoint."""
+    result_text = generate_content_with_fallback(prompt, response_mime_type="application/json", response_schema=schema)
+    return schema.model_validate_json(result_text).model_dump()
 
 # Local fallback data generators
 def get_fallback_journal_analysis(text: str, exam: str, current_stress: int) -> Dict[str, Any]:
@@ -252,19 +319,36 @@ def get_fallback_chat_reply(message: str, exam: str) -> str:
 
 # Endpoints
 @app.get("/api/health", summary="Health check status")
-def health_check():
+def health_check(check: bool = Query(False, description="Also send a tiny live request to Gemini to verify the key")):
     """
     Check the status of the MindAlign backend server.
-    
+
     Returns:
         A JSON dictionary indicating server status, Gemini connectivity, and model configuration.
+        The API key itself is never returned, only the name of the variable it was read from.
     """
-    key = get_gemini_api_key()
-    return {
+    models = get_gemini_models()
+    result = {
         "status": "healthy",
-        "gemini_api_configured": bool(key),
-        "gemini_model": os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+        "gemini_api_configured": bool(get_gemini_api_key()),
+        "gemini_key_source": get_gemini_key_source(),
+        "gemini_model": models[0],
+        "gemini_models": models,
     }
+    if check:
+        if not result["gemini_api_configured"]:
+            result["gemini_live_check"] = {"ok": False, "error": f"No key found in any of {', '.join(GEMINI_KEY_ENV_VARS)}"}
+        else:
+            started = time.monotonic()
+            try:
+                reply = generate_content_with_fallback("Reply with the single word: pong")
+                result["gemini_live_check"] = {"ok": True, "reply": reply[:40]}
+            except genai_errors.APIError as e:
+                result["gemini_live_check"] = {"ok": False, "error": f"{e.code} {e.status}: {e.message}"}
+            except Exception as e:
+                result["gemini_live_check"] = {"ok": False, "error": f"{type(e).__name__}: {str(e)[:300]}"}
+            result["gemini_live_check"]["seconds"] = round(time.monotonic() - started, 2)
+    return result
 
 @app.post("/api/analyze-journal", response_model=JournalAnalysisResponse, summary="Analyze student journal entry")
 async def analyze_journal(request: JournalRequest):
@@ -299,8 +383,9 @@ Your JSON structure must contain exactly these keys:
 
 If self-harm is detected, include crisis helpline numbers in India (like Vandrevala Foundation: +91 9999 666 555) in the analysis_summary and lower the mood_score.
 """
-        result_text = generate_content_with_fallback(prompt, response_mime_type="application/json")
-        return json.loads(result_text)
+        analysis = generate_json_with_fallback(prompt, JournalAnalysisResponse)
+        analysis["mood_score"] = max(1, min(100, analysis["mood_score"]))
+        return analysis
     except Exception as e:
         logger.error(f"Error calling Gemini API in analyze_journal: {str(e)}")
         return get_fallback_journal_analysis(request.text, request.exam, request.current_stress)
@@ -378,7 +463,7 @@ Their recent triggers include: {', '.join(request.student_context.recent_trigger
 - Keep responses short, supportive, and conversational (2-4 sentences max per response).
 - If self-harm is hinted, direct to Tele-MANAS (14416 / 1800-891-4416) or Kiran (1800-599-0019) immediately.
 """
-        prompt_parts = [system_instruction, "\nConversation History:\n"]
+        prompt_parts = ["Conversation History:\n"]
         for msg in request.messages[:-1]:
             speaker = "Student" if msg.role == "user" else "Aura"
             prompt_parts.append(f"{speaker}: {msg.content}")
@@ -387,7 +472,7 @@ Their recent triggers include: {', '.join(request.student_context.recent_trigger
         prompt_parts.append("Aura: (Reply empathetically, concisely, grounded in student memory)")
 
         prompt = "\n".join(prompt_parts)
-        reply = generate_content_with_fallback(prompt)
+        reply = generate_content_with_fallback(prompt, system_instruction=system_instruction)
 
         # 4. Save conversation to SQLite Database
         if username:
@@ -550,8 +635,7 @@ JSON structure must contain exactly these keys:
 - "relaxation_tip": string (a specific relaxation or physical grounding advice based on their stress triggers)
 - "affirmation": string (a positive mindset affirmation)
 """
-        result_text = generate_content_with_fallback(prompt, response_mime_type="application/json")
-        return json.loads(result_text)
+        return generate_json_with_fallback(prompt, DailyTipsResponse)
     except Exception as e:
         logger.error(f"Error generating daily tips: {str(e)}")
         return {
@@ -663,8 +747,10 @@ JSON structure must contain exactly these keys:
 - "correct_idx": integer (0, 1, or 2 representing the index of correct choice in options list)
 - "explanation": string (a concise step-by-step academic explanation of the solution or concept)
 """
-        result_text = generate_content_with_fallback(prompt, response_mime_type="application/json")
-        return json.loads(result_text)
+        quiz = generate_json_with_fallback(prompt, QuizResponse)
+        if len(quiz["options"]) != 3 or quiz["correct_idx"] not in (0, 1, 2):
+            raise ValueError(f"Malformed quiz from Gemini: {len(quiz['options'])} options, correct_idx={quiz['correct_idx']}")
+        return quiz
     except Exception as e:
         logger.error(f"Error generating daily quiz: {str(e)}")
         return get_fallback_quiz(request.exam)

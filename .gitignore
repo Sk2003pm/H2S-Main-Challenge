@@ -36,3 +36,7 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+
+# SQLite WAL side files created by local runs
+*.db-wal
+*.db-shm

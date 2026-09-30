@@ -1,0 +1,3 @@
+# Vercel deploys every api/*.py file with a top-level `app` as its own function,
+# so keep the test suite out of the deployment.
+api/test_main.py

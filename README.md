@@ -62,8 +62,8 @@ MindAlign is a Generative AI-powered digital wellness application built specific
 
 * **Frontend**: React (Vite compilation), Lucide React (Icons), Canvas Confetti (Celebrations), Vitest (Unit testing).
 * **Styling**: Vanilla CSS (Calming dark-mode theme, CSS variables design token system, responsive flexbox/grid layouts, custom scrollbars, and fluid glassmorphic card patterns).
-* **Backend**: FastAPI (Python), Google Generative AI (Gemini integration), Pydantic schemas.
-* **Serverless Deployment**: Vercel Serverless Functions (`vercel.json` rewrites `/api/*` to Python serverless runtimes).
+* **Backend**: FastAPI (Python), Google Gen AI SDK (`google-genai`, Gemini integration), Pydantic schemas.
+* **Serverless Deployment**: Vercel Serverless Functions (`vercel.json` rewrites `/api/*` to the single `api/index.py` Python function).
 
 ---
 
@@ -106,6 +106,12 @@ To run the full-stack setup locally, run the frontend and backend servers concur
    *The frontend will run on `http://localhost:5173/`.*
    *The Vite proxy config automatically reroutes `/api/*` requests to the local backend on port 8000.*
 
+### Deploying on Vercel
+1. In **Project Settings → Environment Variables**, add `GEMINI_API_KEY` (enabled for Production and Preview), then redeploy. Optionally set `GEMINI_MODEL` to override the default `gemini-2.5-flash`.
+2. `api/index.py` is the only backend entrypoint. Vercel only deploys a Python file whose top-level code defines `app`, so keep its `from main import app` import unconditional.
+3. Verify the deployment: `GET /api/health` shows whether the key was found (`gemini_key_source`), and `GET /api/health?check=true` sends a tiny live request to Gemini and reports the result.
+4. The SQLite database is copied to `/tmp` on Vercel (the deployment filesystem is read-only), so data written in production is ephemeral.
+
 ---
 
 ## 🎯 Evaluation Focus Areas Alignment
@@ -124,7 +130,7 @@ To run the full-stack setup locally, run the frontend and backend servers concur
 ### 3. Efficiency (Optimal Resource Use)
 * **Client-Side Sound & Audio Synthesis**: Ambient ocean sounds, alpha waves, and balloon-popping sound effects are synthesized on-the-fly using the HTML5 Web Audio API, avoiding heavy static audio file downloads.
 * **Offline-First Database**: Eliminates server database cold-starts or connection lag by keeping student progress locally saved.
-* **GenAI Cascade Failback**: Prompts use a robust cascading fallback executor in Python, trying preferred models (`gemini-2.5-pro` -> `gemini-1.5-flash` -> `gemini-2.0-flash` etc.) and defaulting to local regex metrics if quota limits are exceeded.
+* **GenAI Cascade Failback**: Prompts use a robust cascading fallback executor in Python, trying fast models (`gemini-2.5-flash` -> `gemini-2.5-flash-lite` -> `gemini-3-flash-preview`) within a bounded time budget, and defaulting to local regex metrics if quota limits are exceeded.
 
 ### 4. Testing (Functionality Validation)
 * **Frontend Unit Tests (Vitest)**: Comprehensive storage layer, registration, login sessions, and database sandboxing unit tests passing successfully.

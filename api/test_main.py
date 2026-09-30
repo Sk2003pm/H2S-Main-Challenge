@@ -1,5 +1,21 @@
+import os
+import sys
+import tempfile
+import importlib.util
+from types import SimpleNamespace
+from unittest import mock
+
+# Hermetic tests: never call the real Gemini API (even if a local .env has a key)
+# and never modify the committed seed database in data/.
+for _key_var in ("GEMINI_API_KEY", "GOOGLE_API_KEY", "VITE_GEMINI_API_KEY"):
+    os.environ[_key_var] = ""
+os.environ.setdefault("DATABASE_PATH", os.path.join(tempfile.mkdtemp(), "mindalign_test.db"))
+
 from fastapi.testclient import TestClient
 import unittest
+from google.genai import errors as genai_errors
+from api import main as main_module
+from api import database as database_module
 from api.main import app
 
 
@@ -293,6 +309,86 @@ class TestMindAlignAPI(unittest.TestCase):
         self.assertEqual(get_res.status_code, 200)
         memories = get_res.json()
         self.assertTrue(any(m["category"] == "coping_preference" for m in memories))
+
+
+class TestVercelAndGeminiIntegration(unittest.TestCase):
+    """Regression tests for the Vercel entrypoint, the read-only DB fallback and the Gemini model chain."""
+
+    def setUp(self):
+        self.client = TestClient(app)
+
+    def _fake_client(self, side_effects):
+        generate = mock.Mock(side_effect=side_effects)
+        return SimpleNamespace(models=SimpleNamespace(generate_content=generate)), generate
+
+    def test_vercel_entrypoint_loads_as_top_level_module(self):
+        """Vercel imports api/index.py without a package context; it must still expose the FastAPI app."""
+        index_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "index.py")
+        saved_path, saved_modules = list(sys.path), set(sys.modules)
+        try:
+            spec = importlib.util.spec_from_file_location("vercel_index_entrypoint", index_path)
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            self.assertIn("/api/health", [route.path for route in module.app.routes])
+        finally:
+            sys.path[:] = saved_path
+            for name in set(sys.modules) - saved_modules:
+                del sys.modules[name]
+
+    def test_database_uses_tmp_copy_on_vercel(self):
+        """On Vercel the deployment is read-only, so the seed DB must be copied to the temp dir."""
+        tmp_dir = tempfile.mkdtemp()
+        with mock.patch.dict(os.environ, {"VERCEL": "1", "DATABASE_PATH": ""}), \
+                mock.patch.object(database_module.tempfile, "gettempdir", return_value=tmp_dir):
+            path = database_module.resolve_db_path()
+        self.assertEqual(path, os.path.join(tmp_dir, "mindalign.db"))
+        self.assertTrue(os.path.exists(path))
+
+    def test_model_chain_skips_unavailable_model(self):
+        """A 404 for one model must fall through to the next model instead of the canned fallback."""
+        not_found = genai_errors.ClientError(404, {"error": {"code": 404, "message": "model not found", "status": "NOT_FOUND"}})
+        tips = '{"focus_tip": "Gemini focus", "relaxation_tip": "Gemini relax", "affirmation": "Gemini affirm"}'
+        fake, generate = self._fake_client([not_found, SimpleNamespace(text=tips, candidates=[])])
+        with mock.patch.object(main_module, "get_gemini_api_key", return_value="test-key"), \
+                mock.patch.object(main_module, "get_gemini_client", return_value=fake), \
+                mock.patch.object(main_module, "get_gemini_models", return_value=["retired-model", "gemini-2.5-flash"]):
+            response = self.client.post("/api/daily-tips", json={"exam": "GATE", "triggers": [], "current_stress": 40})
+        self.assertEqual(response.json()["focus_tip"], "Gemini focus")
+        self.assertEqual([c.kwargs["model"] for c in generate.call_args_list], ["retired-model", "gemini-2.5-flash"])
+
+    def test_invalid_key_stops_model_chain(self):
+        """An invalid API key fails every model, so the chain must stop after the first attempt."""
+        bad_key = genai_errors.ClientError(400, {"error": {"code": 400, "message": "API key not valid. Please pass a valid API key.", "status": "INVALID_ARGUMENT"}})
+        fake, generate = self._fake_client([bad_key, bad_key])
+        with mock.patch.object(main_module, "get_gemini_api_key", return_value="bad-key"), \
+                mock.patch.object(main_module, "get_gemini_client", return_value=fake), \
+                mock.patch.object(main_module, "get_gemini_models", return_value=["gemini-2.5-flash", "gemini-2.5-flash-lite"]):
+            response = self.client.post("/api/generate-quiz", json={"exam": "GATE", "triggers": []})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json()["options"]), 3)  # local fallback quiz
+        self.assertEqual(generate.call_count, 1)
+
+    def test_malformed_gemini_json_falls_back(self):
+        """A reply missing required keys must return the local fallback, not a 500."""
+        fake, _ = self._fake_client([SimpleNamespace(text='{"mood_score": 40}', candidates=[])])
+        with mock.patch.object(main_module, "get_gemini_api_key", return_value="test-key"), \
+                mock.patch.object(main_module, "get_gemini_client", return_value=fake), \
+                mock.patch.object(main_module, "get_gemini_models", return_value=["gemini-2.5-flash"]):
+            response = self.client.post("/api/analyze-journal", json={
+                "text": "Mock test scores dropped and my syllabus backlog keeps growing.",
+                "exam": "NEET UG",
+                "current_stress": 70
+            })
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("coping_strategies", response.json())
+
+    def test_health_live_check_without_key(self):
+        """GET /api/health?check=true reports a failed live check (never the key) when no key is set."""
+        response = self.client.get("/api/health?check=true")
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertFalse(data["gemini_api_configured"])
+        self.assertFalse(data["gemini_live_check"]["ok"])
 
 
 if __name__ == "__main__":

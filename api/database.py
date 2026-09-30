@@ -1,21 +1,47 @@
 import os
+import shutil
 import sqlite3
 import json
 import logging
+import tempfile
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 
 logger = logging.getLogger("MindAlignDatabase")
 
-# Determine DB path with fallback for serverless read-only environments
-DEFAULT_DB_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
-try:
-    os.makedirs(DEFAULT_DB_DIR, exist_ok=True)
-    DEFAULT_DB_PATH = os.path.join(DEFAULT_DB_DIR, "mindalign.db")
-except Exception:
-    DEFAULT_DB_PATH = os.path.join("/tmp", "mindalign.db")
+# Committed seed database (data/mindalign.db)
+SEED_DB_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data"))
+SEED_DB_PATH = os.path.join(SEED_DB_DIR, "mindalign.db")
 
-DB_PATH = os.getenv("DATABASE_PATH", DEFAULT_DB_PATH)
+
+def resolve_db_path() -> str:
+    """
+    Pick a writable SQLite path.
+
+    Vercel serverless functions run from a read-only filesystem (only /tmp is writable),
+    and the seed database is in WAL mode, which needs to create -wal/-shm files next to it.
+    Opening it in place crashed the whole API at import time, so on Vercel (or any read-only
+    deployment) the seed is copied to the temp directory on cold start.
+    Note: /tmp is per-instance and ephemeral, so data written there does not persist long-term.
+    """
+    env_path = os.getenv("DATABASE_PATH", "").strip()
+    if env_path:
+        return env_path
+
+    read_only = os.getenv("VERCEL") or not os.access(SEED_DB_DIR, os.W_OK)
+    if not read_only:
+        return SEED_DB_PATH
+
+    tmp_path = os.path.join(tempfile.gettempdir(), "mindalign.db")
+    if not os.path.exists(tmp_path) and os.path.exists(SEED_DB_PATH):
+        try:
+            shutil.copyfile(SEED_DB_PATH, tmp_path)
+        except OSError as e:
+            logger.error(f"Could not copy seed database to {tmp_path}: {str(e)}")
+    return tmp_path
+
+
+DB_PATH = resolve_db_path()
 
 
 def get_db_connection():
@@ -29,8 +55,9 @@ def get_db_connection():
 
 def init_db():
     """Initialize database schema with all required tables and indexes."""
-    conn = get_db_connection()
+    conn = None
     try:
+        conn = get_db_connection()
         with conn:
             # 1. Users table
             conn.execute("""
@@ -125,10 +152,12 @@ def init_db():
         logger.info(f"MindAlign Database initialized successfully at {DB_PATH}")
         return True
     except Exception as e:
-        logger.error(f"Error initializing MindAlign database: {str(e)}")
+        # Never let a database problem take down the whole API (including the Gemini endpoints)
+        logger.error(f"Error initializing MindAlign database at {DB_PATH}: {str(e)}")
         return False
     finally:
-        conn.close()
+        if conn is not None:
+            conn.close()
 
 
 # -------------------------------------------------------------
