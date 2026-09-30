@@ -382,6 +382,68 @@ class TestVercelAndGeminiIntegration(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("coping_strategies", response.json())
 
+    def test_transcribe_rejects_bad_requests(self):
+        """/api/transcribe validates the audio type, empty bodies and a missing key before calling Gemini."""
+        self.assertEqual(self.client.post("/api/transcribe", content=b"abc", headers={"Content-Type": "text/plain"}).status_code, 415)
+        self.assertEqual(self.client.post("/api/transcribe", content=b"", headers={"Content-Type": "audio/wav"}).status_code, 400)
+        self.assertEqual(self.client.post("/api/transcribe", content=b"RIFF....", headers={"Content-Type": "audio/wav"}).status_code, 503)
+
+    def test_transcribe_returns_gemini_transcript(self):
+        """Audio is forwarded to Gemini as an inline part and the cleaned transcript is returned."""
+        fake, generate = self._fake_client([SimpleNamespace(text='{"transcript": "  I feel   stressed about mocks "}', candidates=[])])
+        with mock.patch.object(main_module, "get_gemini_api_key", return_value="test-key"), \
+                mock.patch.object(main_module, "get_gemini_client", return_value=fake):
+            response = self.client.post("/api/transcribe", content=b"RIFF-fake-wav", headers={"Content-Type": "audio/wav"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["text"], "I feel stressed about mocks")
+        audio_part = generate.call_args.kwargs["contents"][0]
+        self.assertEqual(audio_part.inline_data.mime_type, "audio/wav")
+        self.assertEqual(audio_part.inline_data.data, b"RIFF-fake-wav")
+
+    def test_chat_prompt_includes_journal_references(self):
+        """Journal entries shared by the frontend reach Gemini, with the focused entry first."""
+        fake, generate = self._fake_client([SimpleNamespace(text="In your journal you mentioned mocks.", candidates=[])])
+        payload = {
+            "messages": [{"role": "user", "content": "Can we talk about my week?"}],
+            "student_context": {"exam": "NEET UG", "current_stress": 60, "recent_triggers": []},
+            "journal_context": [
+                {"date": "27 Sep 2026", "text": "Physics backlog is huge.", "mood_score": 50, "triggers": ["Syllabus Load"]},
+                {"date": "28 Sep 2026", "text": "Mock score dropped again.", "mood_score": 30, "triggers": ["Mock Test"], "focused": True}
+            ]
+        }
+        with mock.patch.object(main_module, "get_gemini_api_key", return_value="test-key"), \
+                mock.patch.object(main_module, "get_gemini_client", return_value=fake):
+            response = self.client.post("/api/chat-companion", json=payload)
+        self.assertEqual(response.json()["reply"], "In your journal you mentioned mocks.")
+        prompt = generate.call_args.kwargs["contents"]
+        self.assertIn("FOCUS ENTRY", prompt)
+        self.assertLess(prompt.index("Mock score dropped again."), prompt.index("Physics backlog is huge."))
+
+    def test_guardrail_reply_survives_database_failure(self):
+        """A SQLite failure must never swallow the crisis helpline response."""
+        with mock.patch.object(database_module, "save_chat_message", side_effect=RuntimeError("disk I/O error")), \
+                mock.patch.object(database_module, "log_guardrail_event", side_effect=RuntimeError("disk I/O error")):
+            response = self.client.post("/api/chat-companion", json={
+                "messages": [{"role": "user", "content": "I want to kill myself"}],
+                "student_context": {"exam": "JEE", "current_stress": 95, "recent_triggers": []},
+                "username": "db_failure_tester"
+            })
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()["guardrail_triggered"])
+        self.assertIn("14416", response.json()["reply"])
+
+    def test_thinking_config_per_model_family(self):
+        """Each model family gets a thinking setting it accepts."""
+        self.assertEqual(main_module.get_thinking_config("gemini-2.5-flash").thinking_budget, 0)
+        self.assertEqual(main_module.get_thinking_config("gemini-3.6-flash").thinking_level, "MINIMAL")
+        self.assertEqual(main_module.get_thinking_config("gemini-3.5-flash-lite").thinking_level, "MINIMAL")
+        self.assertEqual(main_module.get_thinking_config("gemini-3.8-flash").thinking_level, "LOW")
+        self.assertIsNone(main_module.get_thinking_config("gemini-flash-latest"))
+
+    def test_health_rejects_unconfigured_model(self):
+        """The per-model live check only accepts models from the configured chain."""
+        self.assertEqual(self.client.get("/api/health?check=true&model=gemini-ultra-9000").status_code, 400)
+
     def test_health_live_check_without_key(self):
         """GET /api/health?check=true reports a failed live check (never the key) when no key is set."""
         response = self.client.get("/api/health?check=true")

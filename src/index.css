@@ -1230,6 +1230,51 @@ textarea:focus-visible,
   animation: pulse-glow 1s infinite ease-in-out;
 }
 
+/* Aura Live: live mic level meter (--mic-level is set from the voice activity monitor) */
+.voice-level-meter {
+  --mic-level: 0;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 16px;
+}
+
+.voice-level-bar {
+  width: 3px;
+  height: 100%;
+  border-radius: 2px;
+  background-color: currentColor;
+  transform: scaleY(calc(0.2 + var(--mic-level) * var(--bar-weight, 0.8)));
+  transition: transform 0.1s linear;
+}
+
+/* While Aura speaks, the bars pulse on their own */
+.voice-level-meter.speaking .voice-level-bar {
+  animation: voice-bar-wave 0.9s ease-in-out infinite;
+  animation-delay: calc(var(--bar-index, 0) * 0.12s);
+}
+
+@keyframes voice-bar-wave {
+  0%, 100% { transform: scaleY(0.25); }
+  50% { transform: scaleY(0.95); }
+}
+
+/* Fills up during the 3-second pause before Aura replies */
+.pause-progress {
+  height: 3px;
+  margin-top: 0.45rem;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+
+.pause-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: #93c5fd;
+  transition: width 0.1s linear;
+}
+
 /* Next-Level 3D Three.js Engine & Authentication Portal Styles */
 .particles-3d-canvas-wrapper {
   position: fixed;

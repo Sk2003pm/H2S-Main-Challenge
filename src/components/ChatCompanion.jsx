@@ -87,7 +87,8 @@ export default function ChatCompanion({ examProfile, onTriggerConfirm }) {
       console.error('Error sending message:', error);
       const errorMessage = {
         role: 'model',
-        content: 'Hey. I am having a little trouble connecting right now, but please take a deep breath. Focus on inhaling for 4 seconds, holding for 4, and exhaling for 4. What is bothering you?',
+        // Must stay crisis-safe: the server-side helpline guardrail can't run when the request fails
+        content: 'Hey. I am having a little trouble connecting right now, but please take a deep breath. Focus on inhaling for 4 seconds, holding for 4, and exhaling for 4. If you feel unsafe or overwhelmed, please call Tele-MANAS at 14416 or KIRAN at 1800-599-0019, free and available 24x7. What is bothering you?',
         timestamp: new Date().toISOString()
       };
       setMessages(prev => [...prev, errorMessage]);
