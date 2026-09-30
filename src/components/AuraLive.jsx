@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import { Video, VideoOff, Mic, MicOff, Send, Hand, Volume2, Sparkles, AlertTriangle } from 'lucide-react';
 import { storage } from '../utils/storage';
 import { encodeWav, PCM_CAPTURE_WORKLET, CAPTURE_CHUNK_SIZE } from '../utils/audioCapture';
+import { buildJournalContext } from '../utils/journalContext';
 import DimensionalAnalysisVisualizer from './DimensionalAnalysisVisualizer';
 
 const SPEECH_LANG = 'en-US';
@@ -504,7 +505,9 @@ export default function AuraLive({ examProfile, onTriggerConfirm }) {
             exam: examProfileRef.current?.exam || 'Competitive Exam',
             current_stress: currentStress,
             recent_triggers: recentTriggers
-          }
+          },
+          // Aura can reference the student's journal entries while talking
+          journal_context: buildJournalContext(journalLogs)
         })
       });
 
