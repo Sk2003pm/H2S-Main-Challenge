@@ -515,6 +515,9 @@ export default function AuraLive({ examProfile, onTriggerConfirm }) {
 
       const data = await response.json();
       if (typeof data.reply !== 'string' || !data.reply.trim()) throw new Error('Empty reply');
+      if (data.ai_source === 'fallback') {
+        setVoiceNotice("Aura's AI is offline on this server (Gemini key missing or unreachable), so her replies are generic.");
+      }
 
       // Save full chat history back to storage
       storage.saveChatMessages([...newMessages, { role: 'model', content: data.reply }]);

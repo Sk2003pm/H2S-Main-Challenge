@@ -18,6 +18,7 @@ export default function ChatCompanion({ examProfile, onTriggerConfirm }) {
   const [isLoading, setIsLoading] = useState(false);
   const [journals, setJournals] = useState([]);
   const [focusedJournalId, setFocusedJournalId] = useState(null);
+  const [aiOffline, setAiOffline] = useState(false);
 
   const messagesEndRef = useRef(null);
 
@@ -84,6 +85,8 @@ export default function ChatCompanion({ examProfile, onTriggerConfirm }) {
       if (typeof result.reply !== 'string' || !result.reply.trim()) {
         throw new Error('Empty reply');
       }
+      // The backend answers with generic built-in replies when it has no working Gemini key
+      setAiOffline(result.ai_source === 'fallback');
 
       const assistantMessage = {
         role: 'model',
@@ -200,6 +203,12 @@ export default function ChatCompanion({ examProfile, onTriggerConfirm }) {
           )}
           <div ref={messagesEndRef} />
         </div>
+
+        {aiOffline && (
+          <div className="chat-reference-bar" role="status" style={{ color: '#fbbf24', background: 'rgba(251, 191, 36, 0.1)', borderTopColor: 'rgba(251, 191, 36, 0.3)' }}>
+            <span>Aura's AI is offline on this server (Gemini key missing or unreachable), so replies are generic.</span>
+          </div>
+        )}
 
         {focusedJournal && (
           <div className="chat-reference-bar">

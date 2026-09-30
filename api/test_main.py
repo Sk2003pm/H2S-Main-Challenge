@@ -440,6 +440,21 @@ class TestVercelAndGeminiIntegration(unittest.TestCase):
         self.assertEqual(main_module.get_thinking_config("gemini-3.8-flash").thinking_level, "LOW")
         self.assertIsNone(main_module.get_thinking_config("gemini-flash-latest"))
 
+    def test_offline_chat_replies_follow_the_topic(self):
+        """Without a Gemini key, replies are marked as fallback and differ by what the student raised."""
+        def ask(text):
+            response = self.client.post("/api/chat-companion", json={
+                "messages": [{"role": "user", "content": text}],
+                "student_context": {"exam": "GATE", "current_stress": 50, "recent_triggers": []}
+            })
+            self.assertEqual(response.json()["ai_source"], "fallback")
+            return response.json()["reply"]
+
+        replies = {ask("I could not sleep last night"), ask("My mock score dropped"), ask("My friends are ahead of me"), ask("Hello")}
+        self.assertEqual(len(replies), 4)
+        # "studied" must not be mistaken for the crisis keyword "die"
+        self.assertNotIn("Helpline", ask("I studied all evening"))
+
     def test_health_rejects_unconfigured_model(self):
         """The per-model live check only accepts models from the configured chain."""
         self.assertEqual(self.client.get("/api/health?check=true&model=gemini-ultra-9000").status_code, 400)

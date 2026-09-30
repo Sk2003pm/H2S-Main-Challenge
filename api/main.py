@@ -1,4 +1,5 @@
 import os
+import re
 import time
 import logging
 from datetime import datetime
@@ -345,12 +346,34 @@ def get_fallback_journal_analysis(text: str, exam: str, current_stress: int) -> 
         "milestone_encouragement": f"Preparing for {exam} takes daily perseverance. Take it one question at a time."
     }
 
+# Topic-aware offline replies (used when no Gemini key is configured or Gemini is unreachable)
+FALLBACK_CHAT_TOPICS = [
+    (("sleep", "insomnia", "tired", "exhaust", "awake", "3 am"),
+     "Running on little sleep makes {exam} prep feel twice as heavy. Tonight, try stopping study 30 minutes before bed and doing 4-7-8 breathing; rested recall beats one more late chapter."),
+    (("mock", "score", "marks", "rank", "percentile", "result"),
+     "A mock score is feedback, not a verdict on your {exam} attempt. Pick the three questions that cost you the most marks and work out whether each was a concept gap, a slip or a time issue."),
+    (("friend", "compar", "everyone", "others", "peers", "topper", "ahead of me"),
+     "Comparing yourself with others is exhausting, and their scores say nothing about your own progress. Look at your last two weeks instead: what is one topic you handle better now than before?"),
+    (("parent", "family", "expectation", "relative", "pressure from"),
+     "Carrying family expectations on top of {exam} prep is a lot. It can help to tell them one specific thing you need this week, like quiet study hours or fewer score questions."),
+    (("focus", "concentrat", "distract", "procrastinat", "phone", "motivat"),
+     "When focus won't come, shrink the task: set a 25-minute timer for one small topic, phone in another room, then take a 5-minute break. Starting is the hardest part."),
+    (("syllabus", "backlog", "revision", "time", "schedule", "last week", "plan", "chapter"),
+     "When the {exam} syllabus feels endless, list what is left, mark the highest-weightage topics, and plan only tomorrow. One finished block a day adds up faster than it feels."),
+    (("fail", "afraid", "scared", "fear", "anxious", "anxiety", "panic", "nervous", "worried"),
+     "That fear shows how much {exam} matters to you. Try grounding yourself: name 5 things you can see, 4 you can touch and 3 you can hear, then pick one small thing you can do in the next hour."),
+]
+
 def get_fallback_chat_reply(message: str, exam: str) -> str:
     msg_lower = message.lower()
-    if "suicide" in msg_lower or "kill myself" in msg_lower or "end it" in msg_lower or "die" in msg_lower:
+    if re.search(r"\b(suicide|kill myself|end it|die)\b", msg_lower):  # whole words only: "studied" is not "die"
         return ("It sounds like you are going through an incredibly dark and difficult time. Please know that you are not alone and there is support available. "
                 "I strongly encourage you to connect with professional help immediately. In India, you can call Vandrevala Foundation Helpline at +91 9999 666 555 "
                 "or Kiran Helpline at 1800-599-0019. Please reach out to them or a trusted adult right now.")
+    # Without Gemini, at least respond to what the student raised instead of repeating one sentence
+    for keywords, reply in FALLBACK_CHAT_TOPICS:
+        if any(keyword in msg_lower for keyword in keywords):
+            return reply.format(exam=exam)
     return f"Preparing for {exam} can feel overwhelming. Take a short 2-minute break, drink some water, and remember that your well-being comes first."
 
 def safe_db_call(action: str, func, *args, default=None, **kwargs):
@@ -501,6 +524,7 @@ async def chat_companion(request: ChatRequest):
         return {
             "reply": guardrail_check["response"],
             "guardrail_triggered": True,
+            "ai_source": "guardrail",
             "guardrail_type": guardrail_check["guardrail_type"],
             "helplines": guardrail_check.get("helplines")
         }
@@ -523,7 +547,7 @@ async def chat_companion(request: ChatRequest):
     if not get_gemini_api_key():
         reply = get_fallback_chat_reply(last_msg, exam)
         save_chat_exchange(username, last_msg, reply)
-        return {"reply": reply, "guardrail_triggered": False}
+        return {"reply": reply, "guardrail_triggered": False, "ai_source": "fallback"}
 
     try:
         system_instruction = f"""
@@ -562,12 +586,12 @@ Their recent triggers include: {', '.join(request.student_context.recent_trigger
         # 4. Save conversation to SQLite Database
         save_chat_exchange(username, last_msg, reply)
 
-        return {"reply": reply, "guardrail_triggered": False}
+        return {"reply": reply, "guardrail_triggered": False, "ai_source": "gemini"}
     except Exception as e:
         logger.error(f"Error in chat companion: {str(e)}")
         reply = get_fallback_chat_reply(last_msg, exam)
         save_chat_exchange(username, last_msg, f"[Offline Mode] {reply}")
-        return {"reply": f"[Offline Mode] {reply}", "guardrail_triggered": False}
+        return {"reply": f"[Offline Mode] {reply}", "guardrail_triggered": False, "ai_source": "fallback"}
 
 @app.post("/api/transcribe", summary="Transcribe a spoken Aura Live turn with Gemini")
 async def transcribe_audio(request: Request):
